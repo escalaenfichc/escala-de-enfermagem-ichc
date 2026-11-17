@@ -9,12 +9,15 @@ import {
   Moon,
   UserCheck,
   Wand2,
+  Building2,
 } from 'lucide-react';
 import {
+  carregarSetoresAtivos,
   carregarEscaladosMensal,
   salvarEscaladosMensal,
   criarPadraoTurnosEscaladosVazio,
 } from '../../services/rundownService';
+import { useAuth } from '../../contexts/AuthContext';
 
 const MESES = [
   'Janeiro',
@@ -34,11 +37,13 @@ const MESES = [
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 export default function AbaEscaladosUnidade({
-  setorId,
-  setorNome,
+  setorFiltro,
   responsavelPadrao = '',
   onSalvoSucesso,
 }) {
+  const { user } = useAuth();
+  const [setores, setSetores] = useState([]);
+  const [setorNome, setSetorNome] = useState('');
   const [mesRef, setMesRef] = useState(new Date());
   const [responsavelNome, setResponsavelNome] = useState(responsavelPadrao);
   const [padraoTurnos, setPadraoTurnos] = useState(criarPadraoTurnosEscaladosVazio());
@@ -46,6 +51,28 @@ export default function AbaEscaladosUnidade({
   const [salvando, setSalvando] = useState(false);
   const [msgSalvo, setMsgSalvo] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    carregarSetoresAtivos().then((lista) => {
+      setSetores(lista);
+      const preferencial =
+        setorFiltro && setorFiltro !== 'Global' && setorFiltro !== 'Todos'
+          ? setorFiltro
+          : user?.unidadeLogada && user?.unidadeLogada !== 'Global'
+          ? user.unidadeLogada
+          : lista[0]?.nome || '';
+      setSetorNome(preferencial);
+    });
+  }, [setorFiltro, user?.unidadeLogada]);
+
+  const setorObj = useMemo(
+    () =>
+      setores.find(
+        (s) => (s.nome || '').toUpperCase() === (setorNome || '').toUpperCase()
+      ) || null,
+    [setores, setorNome]
+  );
+  const setorId = setorObj?.id;
 
   const ano = mesRef.getFullYear();
   const mesIdx0 = mesRef.getMonth();
@@ -229,7 +256,24 @@ export default function AbaEscaladosUnidade({
         </div>
 
         <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[230px]">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 flex items-center gap-1">
+              <Building2 size={12} className="text-indigo-600" /> Unidade *
+            </label>
+            <select
+              value={setorNome}
+              onChange={(e) => setSetorNome(e.target.value)}
+              className="border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 min-w-[220px]"
+            >
+              {setores.map((s) => (
+                <option key={s.id || s.nome} value={s.nome}>
+                  {s.sigla ? `${s.sigla} — ${s.nome}` : s.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="min-w-[220px]">
             <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 flex items-center gap-1">
               <UserCheck size={12} className="text-indigo-600" /> Responsável pelas Informações *
             </label>

@@ -65,9 +65,6 @@ export default function Rundown({ setorFiltro }) {
   const [setorSelecionadoNome, setSetorSelecionadoNome] = useState('');
   const [loadingInicial, setLoadingInicial] = useState(true);
 
-  // Aba interna do Rundown: 'PLANTAO' | 'ESCALADOS' | 'CALENDARIO'
-  const [abaRundown, setAbaRundown] = useState('PLANTAO');
-
   // Fluxo Lobby vs Formulário
   const [viewAtual, setViewAtual] = useState('lobby'); // 'lobby' | 'form'
   const [listaHistorico, setListaHistorico] = useState([]);
@@ -406,106 +403,47 @@ export default function Rundown({ setorFiltro }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* ── BARRA DE SELEÇÃO DA UNIDADE (A PARTIR DA LISTA) + ABAS INTERNAS DO RUNDOWN ── */}
-      <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-4 print:hidden">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-              <Building2 size={20} />
-            </div>
-            <div>
-              <h2 className="text-lg font-extrabold text-slate-800">
-                Rundown da Unidade (Quantitativo)
-              </h2>
-              <p className="text-xs text-slate-500">
-                Preenchimento de escalados, plantão diário por turno, gestão de leitos, alertas e projeção de afastamentos.
-              </p>
-            </div>
+      {/* ── BARRA DE SELEÇÃO DA UNIDADE ── */}
+      <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+            <Building2 size={20} />
           </div>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Unidade Assistencial *
-              </label>
-              <select
-                value={setorSelecionadoNome}
-                onChange={(e) => {
-                  setSetorSelecionadoNome(e.target.value);
-                  setViewAtual('lobby');
-                }}
-                className="bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3.5 py-2.5 font-bold outline-none focus:ring-2 focus:ring-indigo-500 min-w-[260px]"
-              >
-                {setores.map((s) => (
-                  <option key={s.id || s.nome} value={s.nome}>
-                    {s.sigla ? `${s.sigla} — ${s.nome}` : s.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-800">
+              Rundown
+            </h2>
+            <p className="text-xs text-slate-500">
+              Lançamento diário por turno, gestão de leitos, alertas e projeção de afastamentos.
+            </p>
           </div>
         </div>
 
-        {/* Sub-abas da tela Rundown */}
-        <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={() => setAbaRundown('PLANTAO')}
-            className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all ${
-              abaRundown === 'PLANTAO'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            <ClipboardCheck size={15} /> 1. Lançamento do Plantão (Rundown Diário)
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setAbaRundown('ESCALADOS')}
-            className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all ${
-              abaRundown === 'ESCALADOS'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            <Users size={15} /> 2. Inserir Quantidade de Escalados
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setAbaRundown('CALENDARIO')}
-            className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all ${
-              abaRundown === 'CALENDARIO'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            <CalendarDays size={15} /> 3. Calendário Mensal (Escalados & Projeção)
-          </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+              Unidade Assistencial *
+            </label>
+            <select
+              value={setorSelecionadoNome}
+              onChange={(e) => {
+                setSetorSelecionadoNome(e.target.value);
+                setViewAtual('lobby');
+              }}
+              className="bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3.5 py-2.5 font-bold outline-none focus:ring-2 focus:ring-indigo-500 min-w-[260px]"
+            >
+              {setores.map((s) => (
+                <option key={s.id || s.nome} value={s.nome}>
+                  {s.sigla ? `${s.sigla} — ${s.nome}` : s.nome}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* ── ABA 2: INSERIR QUANTIDADE DE ESCALADOS ── */}
-      {abaRundown === 'ESCALADOS' && (
-        <AbaEscaladosUnidade
-          setorId={setorAtualObj?.id}
-          setorNome={setorSelecionadoNome}
-          responsavelPadrao={responsavelNome}
-          onSalvoSucesso={() => recarregarDadosUnidade()}
-        />
-      )}
-
-      {/* ── ABA 3: CALENDÁRIO MENSAL DE ESCALADOS & PROJEÇÃO ── */}
-      {abaRundown === 'CALENDARIO' && (
-        <CalendarioMensal
-          setorFiltro={setorSelecionadoNome}
-          ocultarSeletorUnidade={true}
-        />
-      )}
-
-      {/* ── ABA 1 / VIEW 1: LOBBY (HISTÓRICO DA UNIDADE) ── */}
-      {abaRundown === 'PLANTAO' && viewAtual === 'lobby' && (
+      {/* ── VIEW 1: LOBBY (HISTÓRICO DA UNIDADE) ── */}
+      {viewAtual === 'lobby' && (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-6 print:hidden">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b pb-4">
             <div>
@@ -633,8 +571,8 @@ export default function Rundown({ setorFiltro }) {
         </div>
       )}
 
-      {/* ── ABA 1 / VIEW 2: FORMULÁRIO DO RUNDOWN ── */}
-      {abaRundown === 'PLANTAO' && viewAtual === 'form' && (
+      {/* ── VIEW 2: FORMULÁRIO DO RUNDOWN ── */}
+      {viewAtual === 'form' && (
         <div
           id="area-impressao-rundown"
           className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-6"

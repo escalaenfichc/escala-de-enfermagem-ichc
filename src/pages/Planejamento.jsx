@@ -13,6 +13,7 @@ import EscalaNominal from '../components/EscalaNominal';
 
 // Módulo Rundown (V2 Quantitativo) e Supervisão Consolidada
 import Rundown from './rundown/Rundown';
+import AbaEscaladosUnidade from './rundown/AbaEscaladosUnidade';
 import ConsolidadoSupervisao from './rundown/ConsolidadoSupervisao';
 import CalendarioMensal from './rundown/CalendarioMensal';
 import ConfigDimensionamentoAdmin from '../components/plantao/ConfigDimensionamentoAdmin';
@@ -780,10 +781,11 @@ export default function Planejamento() {
   ];
 
   const TODOS_MODULOS = [
-    // Módulos Quantitativos / Compartilhados (V2 e V1)
-    { id: "rundown", label: "Rundown da Unidade", icon: <Clock size={16}/>, allowedRoles: ROLES_OPERACIONAIS_TODOS, categoria: 'OPERACIONAL', modo: 'AMBOS' },
+    // Módulos Quantitativos / Compartilhados (acima do card, limpos e sem duplicidade)
+    { id: "rundown", label: "Rundown", icon: <Clock size={16}/>, allowedRoles: ROLES_OPERACIONAIS_TODOS, categoria: 'OPERACIONAL', modo: 'AMBOS' },
+    { id: "escala", label: "Escala Mensal", icon: <CalendarDays size={16}/>, allowedRoles: ROLES_OPERACIONAIS_TODOS, categoria: 'OPERACIONAL', modo: 'AMBOS' },
+    { id: "inserir_escala", label: "Inserir Escala", icon: <UserPlus size={16}/>, allowedRoles: ROLES_OPERACIONAIS_TODOS, categoria: 'OPERACIONAL', modo: 'AMBOS' },
     { id: "supervisao_rundown", label: "Supervisão Consolidada", icon: <Globe size={16}/>, allowedRoles: ['Supervisão', 'Supervisão Plantonista', 'Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador', 'Administrativo'], categoria: 'OPERACIONAL', modo: 'AMBOS' },
-    { id: "escala", label: "Calendário Mensal & Projeção", icon: <CalendarDays size={16}/>, allowedRoles: ROLES_OPERACIONAIS_TODOS, categoria: 'OPERACIONAL', modo: 'AMBOS' },
     { id: "dimensionamento_op", label: "Config. Leitos e Necessários", icon: <Settings size={16}/>, allowedRoles: ['Supervisão', 'Diretor', 'Administrador', 'Administrativo'], categoria: 'OPERACIONAL', modo: 'AMBOS' },
 
     // Módulos Exclusivos da Versão 1 (Nominal)
@@ -902,6 +904,7 @@ export default function Planejamento() {
 
       {/* Módulos Quantitativos (V2 Rundown + Supervisão, disponíveis também na V1) */}
       {moduloAtivo === "rundown" && <Rundown setorFiltro={setorSelecionado} />}
+      {moduloAtivo === "inserir_escala" && <AbaEscaladosUnidade setorFiltro={setorSelecionado} />}
       {moduloAtivo === "supervisao_rundown" && <ConsolidadoSupervisao />}
       {moduloAtivo === "dimensionamento_op" && <ConfigDimensionamentoAdmin />}
 
