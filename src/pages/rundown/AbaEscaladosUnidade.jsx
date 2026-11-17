@@ -309,116 +309,15 @@ export default function AbaEscaladosUnidade({
         </div>
       </div>
 
-      {/* Bloco 1: Padrão de Escalados por Turno */}
-      <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 flex flex-col gap-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-          <div>
-            <h4 className="font-bold text-slate-800 text-sm">
-              1. Quantidade Padrão de Escalados por Turno no Mês
-            </h4>
-            <p className="text-xs text-slate-500">
-              Preencha o quantitativo de escalados de cada turno. O <strong>Diurno 12h</strong> soma automaticamente na Manhã e na Tarde.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={aplicarPadraoNosDias}
-            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-colors self-start md:self-auto"
-          >
-            <Wand2 size={14} /> Aplicar Padrão em Todos os Dias do Mês
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {[
-            {
-              key: 'MANHA',
-              label: 'Manhã (6h)',
-              sub: 'Turno matutino 6h',
-              bg: 'bg-sky-50 border-sky-200',
-              icon: <Sun size={14} className="text-sky-600" />,
-            },
-            {
-              key: 'TARDE',
-              label: 'Tarde (6h)',
-              sub: 'Turno vespertino 6h',
-              bg: 'bg-amber-50 border-amber-200',
-              icon: <Sun size={14} className="text-amber-600" />,
-            },
-            {
-              key: 'DIURNO12',
-              label: 'Diurno 12h (M+T)',
-              sub: 'Soma na Manhã e na Tarde',
-              bg: 'bg-orange-50 border-orange-200',
-              icon: <Sun size={14} className="text-orange-600" />,
-            },
-            {
-              key: 'NOITE_PAR',
-              label: 'Noite 12h · PAR',
-              sub: 'Dias pares do mês',
-              bg: 'bg-violet-50 border-violet-200',
-              icon: <Moon size={14} className="text-violet-600" />,
-            },
-            {
-              key: 'NOITE_IMPAR',
-              label: 'Noite 12h · ÍMPAR',
-              sub: 'Dias ímpares do mês',
-              bg: 'bg-purple-50 border-purple-200',
-              icon: <Moon size={14} className="text-purple-600" />,
-            },
-          ].map((t) => (
-            <div
-              key={t.key}
-              className={`p-3.5 rounded-xl border ${t.bg} flex flex-col gap-3`}
-            >
-              <div>
-                <div className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5">
-                  {t.icon} {t.label}
-                </div>
-                <p className="text-[10px] text-slate-500">{t.sub}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[10px] font-bold text-indigo-800 uppercase mb-1">
-                    Enfermeiros
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={padraoTurnos[t.key]?.ENF ?? 0}
-                    onChange={(e) => atualizarPadrao(t.key, 'ENF', e.target.value)}
-                    className="w-full text-center font-black text-sm text-indigo-800 bg-white border border-indigo-200 rounded-lg py-1.5 outline-none focus:ring-2 focus:ring-indigo-400"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-teal-800 uppercase mb-1">
-                    Téc. / Aux.
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={padraoTurnos[t.key]?.TEC ?? 0}
-                    onChange={(e) => atualizarPadrao(t.key, 'TEC', e.target.value)}
-                    className="w-full text-center font-black text-sm text-teal-800 bg-white border border-teal-200 rounded-lg py-1.5 outline-none focus:ring-2 focus:ring-teal-400"
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Bloco 2: Grade Diária do Mês (Editável dia a dia) */}
+      {/* Grade Diária do Mês (Editável dia a dia) */}
       <div className="flex flex-col gap-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h4 className="font-bold text-slate-800 text-sm">
-              2. Conferência e Ajuste Diário de Escalados ({MESES[mesIdx0]} / {ano})
+              Quantidade Diária de Escalados ({MESES[mesIdx0]} / {ano})
             </h4>
             <p className="text-xs text-slate-500">
-              Você pode ajustar qualquer dia individualmente (ex.: finais de semana ou feriados).
+              Preencha a quantidade de profissionais escalados em cada dia e turno. O <strong>Diurno 12h</strong> soma automaticamente na Manhã e na Tarde.
             </p>
           </div>
 
