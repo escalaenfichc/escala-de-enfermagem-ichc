@@ -9,6 +9,9 @@ import {
 import { supabase } from '../supabase';
 import VisualizacaoEscalaGlobal from '../components/VisualizacaoEscalaGlobal';
 import { useNavigate } from 'react-router-dom';
+import ConfigDimensionamentoAdmin from '../components/plantao/ConfigDimensionamentoAdmin';
+import ConsolidadoSupervisao from './rundown/ConsolidadoSupervisao';
+import { isNominal, moduloVisivelNoModo } from '../config/ambiente';
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -323,14 +326,15 @@ function ConfiguracoesDimensionamento({ setores }) {
 const anoAtual = new Date().getFullYear();
 
 const ABAS = [
-  { id: 'estrategica',      label: 'Visão Estratégica',      icon: BarChart2     },
-  { id: 'auditoria',        label: 'Auditoria de Escalas',    icon: Activity      },
-  { id: 'dimensionamento',  label: 'Config. Dimensionamento', icon: Settings      },
+  { id: 'supervisao',       label: 'Supervisão Consolidada (Rundown)', icon: ShieldCheck, modo: 'AMBOS'   },
+  { id: 'dimensionamento',  label: 'Config. Leitos e Necessários',     icon: Settings,    modo: 'AMBOS'   },
+  { id: 'estrategica',      label: 'Visão Estratégica (Nominal)',      icon: BarChart2,   modo: 'NOMINAL' },
+  { id: 'auditoria',        label: 'Auditoria de Escalas (Nominal)',   icon: Activity,    modo: 'NOMINAL' },
 ];
 
 export default function DashboardAdmin() {
   const navigate = useNavigate();
-  const [abaAtiva, setAbaAtiva] = useState('estrategica');
+  const [abaAtiva, setAbaAtiva] = useState(isNominal ? 'estrategica' : 'supervisao');
   const [filtros, setFiltros] = useState({ mes: '', ano: anoAtual, setor: '' });
   const [colaboradores, setColaboradores] = useState([]);
   const [setores, setSetores] = useState([]);
@@ -340,8 +344,10 @@ export default function DashboardAdmin() {
     async function carregarDados() {
       setLoading(true);
       try {
-        const { data: cData } = await supabase.from('colaboradores').select('*').ilike('status', '%Ativo%');
-        if (cData) setColaboradores(cData);
+        if (isNominal) {
+          const { data: cData } = await supabase.from('colaboradores').select('*').ilike('status', '%Ativo%');
+          if (cData) setColaboradores(cData);
+        }
         
         const { data: sData } = await supabase.from('setores_unidades').select('*').eq('status', 'ATIVO');
         if (sData) setSetores(sData);
@@ -356,29 +362,33 @@ export default function DashboardAdmin() {
 
   if (loading) return <div className="p-10 text-center font-bold text-slate-400">Carregando painel administrativo...</div>;
 
+  const abasVisiveis = ABAS.filter(a => moduloVisivelNoModo(a.modo));
+
   return (
     <div className="flex flex-col gap-4 w-full">
    {/* Nível 1: Abas Principais LIVRES DO CARD */}
       <div className="flex flex-wrap gap-1 mb-4 border-b border-slate-200 pb-2 hide-on-print">
-         <button onClick={() => navigate('/planejamento', { state: { abaPrincipal: 'MEU_PAINEL', moduloAtivo: 'meu_painel' } })} className="px-4 py-2 font-bold text-sm rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2">
-            <UserIcon size={16} />
-            Meu Painel
-         </button>
+         {isNominal && (
+           <button onClick={() => navigate('/planejamento', { state: { abaPrincipal: 'MEU_PAINEL', moduloAtivo: 'meu_painel' } })} className="px-4 py-2 font-bold text-sm rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2">
+              <UserIcon size={16} />
+              Meu Painel
+           </button>
+         )}
          
-         <button onClick={() => navigate('/planejamento', { state: { abaPrincipal: 'OPERACIONAL', moduloAtivo: 'escala_nominal' } })} className="px-4 py-2 font-bold text-sm rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2">
+         <button onClick={() => navigate('/planejamento', { state: { abaPrincipal: 'OPERACIONAL', moduloAtivo: isNominal ? 'escala_nominal' : 'rundown' } })} className="px-4 py-2 font-bold text-sm rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2">
             <CalendarDays size={16} />
-            Gestão Operacional
+            {isNominal ? 'Gestão Operacional' : 'Rundown & Operação'}
          </button>
 
          <button className="px-4 py-2 font-bold text-sm rounded-t-lg border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2 transition-colors">
             <BarChart2 size={16} />
-            Gestão Estratégica
+            Gestão Estratégica & Dimensionamento
          </button>
       </div>
 
       {/* Nível 2: Submódulos da Estratégia */}
       <div className="flex flex-wrap gap-2 mb-6 hide-on-print">
-         {ABAS.map(aba => {
+         {abasVisiveis.map(aba => {
            const Icon = aba.icon;
            const ativo = abaAtiva === aba.id;
            return (
@@ -393,12 +403,13 @@ export default function DashboardAdmin() {
          })}
       </div>
 
-      {abaAtiva === 'estrategica' && <BarraFiltros filtros={filtros} setFiltros={setFiltros} setores={setores} />}
+      {isNominal && abaAtiva === 'estrategica' && <BarraFiltros filtros={filtros} setFiltros={setFiltros} setores={setores} />}
 
       <div className="min-h-[500px]">
-        {abaAtiva === 'estrategica'     && <VisaoEstrategica colaboradores={colaboradores} filtros={filtros} />}
-        {abaAtiva === 'auditoria'       && <AuditoriaEscalas />}
-        {abaAtiva === 'dimensionamento' && <ConfiguracoesDimensionamento setores={setores} />}
+        {abaAtiva === 'supervisao'      && <ConsolidadoSupervisao />}
+        {abaAtiva === 'dimensionamento' && <ConfigDimensionamentoAdmin />}
+        {isNominal && abaAtiva === 'estrategica' && <VisaoEstrategica colaboradores={colaboradores} filtros={filtros} />}
+        {isNominal && abaAtiva === 'auditoria'   && <AuditoriaEscalas />}
       </div>
     </div>
   );

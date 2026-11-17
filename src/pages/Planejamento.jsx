@@ -11,6 +11,13 @@ import PlanejamentoDiario from './PlanejamentoDiario';
 import MeuPainel from './MeuPainel';
 import EscalaNominal from '../components/EscalaNominal';
 
+// Módulo Rundown (V2 Quantitativo) e Supervisão Consolidada
+import Rundown from './rundown/Rundown';
+import ConsolidadoSupervisao from './rundown/ConsolidadoSupervisao';
+import CalendarioMensal from './rundown/CalendarioMensal';
+import ConfigDimensionamentoAdmin from '../components/plantao/ConfigDimensionamentoAdmin';
+import { isNominal, moduloVisivelNoModo } from '../config/ambiente';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // FazerEscala (Double-row, coverage totals, alerts)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -735,7 +742,14 @@ export default function Planejamento() {
         const { data: sData } = await supabase.from('setores_unidades').select('*');
         if (sData) setSetores(sData);
 
-        // --- BUSCA SEGURA E AMPLA ---
+        // No modo QUANTITATIVO (V2 Rundown), NÃO consulta a tabela colaboradores.
+        if (!isNominal) {
+          setColaboradores([]);
+          setLoadingDados(false);
+          return;
+        }
+
+        // --- BUSCA SEGURA E AMPLA (Modo Nominal V1) ---
         setLoadingDados(true);
         console.log("🚀 Buscando dados (Limite 5000 ativos)...");
         
@@ -807,33 +821,67 @@ export default function Planejamento() {
     carregarDados();
   }, [unidadeLogada, JSON.stringify(userRoles), filtroGlobalSetor, loadingAuth]);
 
-  // Tela inicial padrão
+  // Tela inicial padrão conforme Modo de Operação (V1 Nominal vs V2 Quantitativo/Rundown)
   const navigate = useNavigate();
   const isGestorAltoNivel = user?.role === 'Administrador' || user?.role === 'Diretor';
-  const [abaPrincipal, setAbaPrincipal] = useState(isGestorAltoNivel ? 'OPERACIONAL' : 'MEU_PAINEL');
-  const [moduloAtivo, setModuloAtivo] = useState(isGestorAltoNivel ? 'escala_nominal' : 'meu_painel');
+  const isSupervisao = (user?.role || '').includes('Supervisão');
+
+  const abaInicial = !isNominal
+    ? 'OPERACIONAL'
+    : (isGestorAltoNivel ? 'OPERACIONAL' : 'MEU_PAINEL');
+
+  const moduloInicial = !isNominal
+    ? (isSupervisao ? 'supervisao_rundown' : 'rundown')
+    : (isGestorAltoNivel ? 'escala_nominal' : 'meu_painel');
+
+  const [abaPrincipal, setAbaPrincipal] = useState(abaInicial);
+  const [moduloAtivo, setModuloAtivo] = useState(moduloInicial);
   const [setorSelecionado, setSetorSelecionado] = useState(user?.unidadeLogada || 'Global');
 
-  const TODOS_MODULOS = [
-    { id: "meu_painel", label: "Meu Painel", icon: <User size={16}/>, allowedRoles: ['ALL'], categoria: 'MEU_PAINEL' },
-    { id: "plantao_diario", label: "Plantão Diário", icon: <Clock size={16}/>, allowedRoles: ['Plantão Assistencial', 'Enf. Assistencial', 'Liderança 1', 'Enf. Liderança 1', 'Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'OPERACIONAL' },
-    { id: "planejamento_diario", label: "Planejamento Diário", icon: <Calendar size={16}/>, allowedRoles: ['Plantão Assistencial', 'Liderança 1', 'Enf. Liderança 1', 'Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'OPERACIONAL' },
-    { id: "escala_nominal", label: "Fazer Escala", icon: <CalendarDays size={16}/>, allowedRoles: ['Liderança 1', 'Enf. Liderança 1', 'Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'OPERACIONAL' },
-    { id: "escala", label: "Planejamento Mensal", icon: <CalendarDays size={16}/>, allowedRoles: ['Liderança 1', 'Enf. Liderança 1', 'Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'OPERACIONAL' },
-    { id: "ausencias", label: "Ausências", icon: <UserMinus size={16}/>, allowedRoles: ['Liderança 1', 'Enf. Liderança 1', 'Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'OPERACIONAL' },
-    { id: "remanejamento", label: "Remanejamento", icon: <ArrowRightLeft size={16}/>, allowedRoles: ['Liderança 1', 'Enf. Liderança 1', 'Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'OPERACIONAL' },
-    { id: "gestao_colab", label: "Gestão de Colab.", icon: <UserPlus size={16}/>, allowedRoles: ['Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Secretaria', 'Administrador'], categoria: 'OPERACIONAL' },
-    { id: "relatorio", label: "Relatório Gerencial", icon: <TrendingUp size={16}/>, allowedRoles: ['Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'OPERACIONAL' },
-    { id: "setores", label: "Setores Config.", icon: <Building size={16}/>, allowedRoles: ['Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'ESTRATEGICO' },
-    { id: "visao_estrategica", label: "Visão Estratégica", icon: <Eye size={16}/>, allowedRoles: ['Diretor', 'Administrador'], categoria: 'ESTRATEGICO' },
-    { id: "auditoria", label: "Auditoria de Escalas", icon: <ShieldCheck size={16}/>, allowedRoles: ['Diretor', 'Administrador'], categoria: 'ESTRATEGICO' },
-    { id: "dimensionamento", label: "Config. Dimensionamento", icon: <Settings size={16}/>, allowedRoles: ['Diretor', 'Administrador'], categoria: 'ESTRATEGICO' },
-    { id: "dashboard_global", label: "Dashboard Global", icon: <Globe size={16}/>, allowedRoles: ['Diretor', 'Administrador'], categoria: 'ESTRATEGICO' },
+  const ROLES_OPERACIONAIS_TODOS = [
+    'Unidade',
+    'Colaborador',
+    'Plantão Assistencial',
+    'Enf. Assistencial',
+    'Liderança',
+    'Liderança 1',
+    'Enf. Liderança 1',
+    'Liderança 2',
+    'Enf. Liderança 2',
+    'Supervisão',
+    'Supervisão Plantonista',
+    'Diretor',
+    'Administrador',
+    'Administrativo',
   ];
 
-  const isAdmin = userRoles.includes('Administrador');
+  const TODOS_MODULOS = [
+    // Módulos Quantitativos / Compartilhados (V2 e V1)
+    { id: "rundown", label: "Rundown da Unidade", icon: <Clock size={16}/>, allowedRoles: ROLES_OPERACIONAIS_TODOS, categoria: 'OPERACIONAL', modo: 'AMBOS' },
+    { id: "supervisao_rundown", label: "Supervisão Consolidada", icon: <Globe size={16}/>, allowedRoles: ['Supervisão', 'Supervisão Plantonista', 'Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador', 'Administrativo'], categoria: 'OPERACIONAL', modo: 'AMBOS' },
+    { id: "escala", label: "Calendário Mensal & Projeção", icon: <CalendarDays size={16}/>, allowedRoles: ROLES_OPERACIONAIS_TODOS, categoria: 'OPERACIONAL', modo: 'AMBOS' },
+    { id: "dimensionamento_op", label: "Config. Leitos e Necessários", icon: <Settings size={16}/>, allowedRoles: ['Supervisão', 'Diretor', 'Administrador', 'Administrativo'], categoria: 'OPERACIONAL', modo: 'AMBOS' },
+
+    // Módulos Exclusivos da Versão 1 (Nominal)
+    { id: "meu_painel", label: "Meu Painel", icon: <User size={16}/>, allowedRoles: ['ALL'], categoria: 'MEU_PAINEL', modo: 'NOMINAL' },
+    { id: "plantao_diario", label: "Plantão Diário (Nominal)", icon: <Clock size={16}/>, allowedRoles: ['Plantão Assistencial', 'Enf. Assistencial', 'Liderança 1', 'Enf. Liderança 1', 'Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'OPERACIONAL', modo: 'NOMINAL' },
+    { id: "planejamento_diario", label: "Planejamento Diário", icon: <Calendar size={16}/>, allowedRoles: ['Plantão Assistencial', 'Liderança 1', 'Enf. Liderança 1', 'Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'OPERACIONAL', modo: 'NOMINAL' },
+    { id: "escala_nominal", label: "Fazer Escala (Nominal)", icon: <CalendarDays size={16}/>, allowedRoles: ['Liderança 1', 'Enf. Liderança 1', 'Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'OPERACIONAL', modo: 'NOMINAL' },
+    { id: "ausencias", label: "Ausências (Nominal)", icon: <UserMinus size={16}/>, allowedRoles: ['Liderança 1', 'Enf. Liderança 1', 'Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'OPERACIONAL', modo: 'NOMINAL' },
+    { id: "remanejamento", label: "Remanejamento (Nominal)", icon: <ArrowRightLeft size={16}/>, allowedRoles: ['Liderança 1', 'Enf. Liderança 1', 'Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'OPERACIONAL', modo: 'NOMINAL' },
+    { id: "gestao_colab", label: "Gestão de Colab.", icon: <UserPlus size={16}/>, allowedRoles: ['Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Secretaria', 'Administrador'], categoria: 'OPERACIONAL', modo: 'NOMINAL' },
+    { id: "relatorio", label: "Relatório Gerencial", icon: <TrendingUp size={16}/>, allowedRoles: ['Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'OPERACIONAL', modo: 'NOMINAL' },
+    { id: "setores", label: "Setores Config.", icon: <Building size={16}/>, allowedRoles: ['Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador'], categoria: 'ESTRATEGICO', modo: 'AMBOS' },
+    { id: "visao_estrategica", label: "Visão Estratégica", icon: <Eye size={16}/>, allowedRoles: ['Diretor', 'Administrador'], categoria: 'ESTRATEGICO', modo: 'NOMINAL' },
+    { id: "auditoria", label: "Auditoria de Escalas", icon: <ShieldCheck size={16}/>, allowedRoles: ['Diretor', 'Administrador'], categoria: 'ESTRATEGICO', modo: 'NOMINAL' },
+    { id: "dimensionamento", label: "Config. Dimensionamento", icon: <Settings size={16}/>, allowedRoles: ['Diretor', 'Administrador'], categoria: 'ESTRATEGICO', modo: 'AMBOS' },
+    { id: "dashboard_global", label: "Dashboard Global", icon: <Globe size={16}/>, allowedRoles: ['Diretor', 'Administrador'], categoria: 'ESTRATEGICO', modo: 'AMBOS' },
+  ];
+
+  const isAdmin = userRoles.includes('Administrador') || userRoles.includes('Administrativo');
   const modulosPermitidos = TODOS_MODULOS.filter(modulo => 
-    isAdmin || modulo.allowedRoles.includes('ALL') || userRoles.some(role => modulo.allowedRoles.includes(role))
+    moduloVisivelNoModo(modulo.modo) &&
+    (isAdmin || modulo.allowedRoles.includes('ALL') || userRoles.some(role => modulo.allowedRoles.includes(role)))
   );
   if (loadingAuth || loadingDados) {
     return (
@@ -851,27 +899,27 @@ export default function Planejamento() {
 
   return (
     <div className="flex flex-col gap-4">
-        {/* Nível 1: Abas Principais (Visual exato da Imagem 1) */}
+        {/* Nível 1: Abas Principais */}
         <div className="flex flex-wrap gap-1 mb-4 border-b border-slate-200 pb-2 hide-on-print">
-           <button onClick={() => { setAbaPrincipal('MEU_PAINEL'); setModuloAtivo('meu_painel'); }} className={`px-4 py-2 font-bold text-sm rounded-t-lg transition-colors flex items-center gap-2 ${abaPrincipal === 'MEU_PAINEL' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}>
-              <User size={16} />
-              Meu Painel
-           </button>
-           
-           {(user?.role === 'Administrador' || user?.role === 'Diretor' || user?.role?.includes('Liderança') || user?.role === 'Plantão Assistencial') && (
-             <button onClick={() => { 
-                setAbaPrincipal('OPERACIONAL'); 
-                setModuloAtivo(user?.role === 'Plantão Assistencial' ? 'plantao_diario' : 'escala_nominal'); 
-             }} className={`px-4 py-2 font-bold text-sm rounded-t-lg transition-colors flex items-center gap-2 ${abaPrincipal === 'OPERACIONAL' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}>
-                <CalendarDays size={16} />
-                Gestão Operacional
+           {isNominal && (
+             <button onClick={() => { setAbaPrincipal('MEU_PAINEL'); setModuloAtivo('meu_painel'); }} className={`px-4 py-2 font-bold text-sm rounded-t-lg transition-colors flex items-center gap-2 ${abaPrincipal === 'MEU_PAINEL' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}>
+                <User size={16} />
+                Meu Painel
              </button>
            )}
+           
+           <button onClick={() => { 
+              setAbaPrincipal('OPERACIONAL'); 
+              setModuloAtivo(!isNominal ? 'rundown' : (user?.role === 'Plantão Assistencial' ? 'plantao_diario' : 'escala_nominal')); 
+           }} className={`px-4 py-2 font-bold text-sm rounded-t-lg transition-colors flex items-center gap-2 ${abaPrincipal === 'OPERACIONAL' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}>
+              <CalendarDays size={16} />
+              {isNominal ? 'Gestão Operacional' : 'Rundown & Operação'}
+           </button>
 
-           {(user?.role === 'Administrador' || user?.role === 'Diretor') && (
+           {(user?.role === 'Administrador' || user?.role === 'Diretor' || isSupervisao) && (
              <button onClick={() => navigate('/dashboard-admin')} className="px-4 py-2 font-bold text-sm rounded-t-lg transition-colors border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 flex items-center gap-2">
                 <BarChart2 size={16} />
-                Gestão Estratégica
+                Gestão Estratégica & Dimensionamento
              </button>
            )}
         </div>
@@ -928,7 +976,12 @@ export default function Planejamento() {
           </div>
         )}
 
-      {moduloAtivo === "escala_nominal" &&
+      {/* Módulos Quantitativos (V2 Rundown + Supervisão, disponíveis também na V1) */}
+      {moduloAtivo === "rundown" && <Rundown setorFiltro={setorSelecionado} />}
+      {moduloAtivo === "supervisao_rundown" && <ConsolidadoSupervisao />}
+      {moduloAtivo === "dimensionamento_op" && <ConfigDimensionamentoAdmin />}
+
+      {isNominal && moduloAtivo === "escala_nominal" &&
         <EscalaNominal
           colaboradores={colaboradores} 
           setColaboradores={setColaboradores}
@@ -938,17 +991,17 @@ export default function Planejamento() {
           unidadeLogada={setorSelecionado}
         />
       }
-      {moduloAtivo === "escala"       && <PlanejamentoQuantPage />}
-      {moduloAtivo === "ausencias"    && <AusenciasPage colaboradores={colaboradores} ausencias={ausencias} setAusencias={setAusencias} user={user} filtroGlobalSetor={filtroGlobalSetor} />}
+      {moduloAtivo === "escala"       && <CalendarioMensal setorFiltro={setorSelecionado} />}
+      {isNominal && moduloAtivo === "ausencias"    && <AusenciasPage colaboradores={colaboradores} ausencias={ausencias} setAusencias={setAusencias} user={user} filtroGlobalSetor={filtroGlobalSetor} />}
       {moduloAtivo === "setores"      && <SetoresConfigPage setores={setores} setSetores={setSetores} unidadeLogada={unidadeLogada} />}
-      {moduloAtivo === "gestao_colab" && <GestaoColabPage colaboradores={colaboradores} setColaboradores={setColaboradores} unidadeLogada={unidadeLogada} user={user} filtroGlobalSetor={filtroGlobalSetor}/>}
-      {moduloAtivo === "remanejamento" && <RemanejamentoTab colaboradores={colaboradores} user={user} filtroGlobalSetor={filtroGlobalSetor} setores={setores} />}
-      {moduloAtivo === "relatorio" && <RelatorioGerencial colaboradores={colaboradores} ausencias={ausencias} unidadeLogada={unidadeLogada} />}
+      {isNominal && moduloAtivo === "gestao_colab" && <GestaoColabPage colaboradores={colaboradores} setColaboradores={setColaboradores} unidadeLogada={unidadeLogada} user={user} filtroGlobalSetor={filtroGlobalSetor}/>}
+      {isNominal && moduloAtivo === "remanejamento" && <RemanejamentoTab colaboradores={colaboradores} user={user} filtroGlobalSetor={filtroGlobalSetor} setores={setores} />}
+      {isNominal && moduloAtivo === "relatorio" && <RelatorioGerencial colaboradores={colaboradores} ausencias={ausencias} unidadeLogada={unidadeLogada} />}
       
-      {/* Novas páginas do perfil Plantão Assistencial */}
-      {moduloAtivo === "meu_painel" && <MeuPainel setPagina={setModuloAtivo} />}
-      {moduloAtivo === "plantao_diario" && <PlantaoDiario setPagina={setModuloAtivo} setorFiltro={setorSelecionado} />}
-      {moduloAtivo === "planejamento_diario" && <PlanejamentoDiario setPagina={setModuloAtivo} setorFiltro={setorSelecionado} />}
+      {/* Novas páginas do perfil Plantão Assistencial (Somente V1 Nominal) */}
+      {isNominal && moduloAtivo === "meu_painel" && <MeuPainel setPagina={setModuloAtivo} />}
+      {isNominal && moduloAtivo === "plantao_diario" && <PlantaoDiario setPagina={setModuloAtivo} setorFiltro={setorSelecionado} />}
+      {isNominal && moduloAtivo === "planejamento_diario" && <PlanejamentoDiario setPagina={setModuloAtivo} setorFiltro={setorSelecionado} />}
     </div>
   );
 }

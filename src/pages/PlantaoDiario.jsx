@@ -6,23 +6,10 @@ import {
   AlertCircle, BedDouble, AlertTriangle, ShieldAlert, X,
   Plus, ChevronDown, FileText, Biohazard, HeartPulse, Stethoscope, Package, Info, Search, Loader2, Filter
 } from 'lucide-react';
-
-// ─── Tipos de Alerta ─────────────────────────────────────────────────────────
-const TIPOS_ALERTA = [
-{ id: 'isolamentos',        label: 'Isolamentos',                tipo: 'isolamento',    icon: Biohazard   },
-{ id: 'protocolo_agravo',   label: 'Protocolo de Agravo',        tipo: 'leitos',        icon: HeartPulse  },
-{ id: 'acamados',           label: 'Pacientes Acamados',         tipo: 'leitos',        icon: BedDouble   },
-{ id: 'traqueostomia',      label: 'Pacientes c/ Traqueostomia', tipo: 'leitos',        icon: Stethoscope },
-{ id: 'falta_material',     label: 'Falta de Materiais Críticos', tipo: 'material',      icon: Package     },
-{ id: 'demais_infos',       label: 'Demais Informações',         tipo: 'livre',         icon: Info        },
-];
-
-const TIPOS_ISOLAMENTO = [
-'Isolamento por Contacto',
-'Isolamento Respiratório',
-'Isolamento por Gotículas',
-'Isolamento Reverso',
-];
+import { TIPOS_ALERTA, TIPOS_ISOLAMENTO } from '../components/plantao/constantes';
+import ModalAlerta from '../components/plantao/ModalAlerta';
+import GestaoLeitosCard from '../components/plantao/GestaoLeitosCard';
+import AlertasUnidadeCard from '../components/plantao/AlertasUnidadeCard';
 
 // ─── Modal de Justificativa de Ausência ──────────────────────────────────────
 function ModalAusencia({ colaborador, dados, onSalvar, onCancelar }) {
@@ -74,106 +61,7 @@ function ModalAusencia({ colaborador, dados, onSalvar, onCancelar }) {
   );
 }
 
-// ─── Modal de Alerta Dinâmico ─────────────────────────────────────────────────
-function ModalAlerta({ tipoDef, dadosExistentes, onSalvar, onRemover, onCancelar }) {
-  const [form, setForm] = useState({
-    tipoIsolamento: dadosExistentes?.tipoIsolamento || '',
-    leitosPaciente: dadosExistentes?.leitosPaciente || '',
-    quantidadeLeitos: dadosExistentes?.quantidadeLeitos || '',
-    quaisLeitos: dadosExistentes?.quaisLeitos || '',
-    materialDescricao: dadosExistentes?.materialDescricao || '',
-    impacto: dadosExistentes?.impacto || '',
-    textoLivre: dadosExistentes?.textoLivre || '',
-  });
-
-  const u = f => setForm(prev => ({ ...prev, ...f }));
-  const Icon = tipoDef.icon;
-
-  return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white max-w-lg w-full rounded-3xl shadow-2xl overflow-hidden">
-        <div className="bg-orange-500 p-5 flex justify-between items-center text-white">
-          <h3 className="font-bold flex items-center gap-2"><Icon size={20}/> {tipoDef.label}</h3>
-          <button onClick={onCancelar} className="hover:bg-orange-600 p-1 rounded-full transition-colors"><X size={20}/></button>
-        </div>
-
-        <form className="p-6 flex flex-col gap-4" onSubmit={e => { e.preventDefault(); onSalvar(form); }}>
-          {tipoDef.tipo === 'isolamento' && (
-            <>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Tipo de Isolamento *</label>
-                <select required className="w-full border border-slate-300 p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 bg-slate-50"
-                  value={form.tipoIsolamento} onChange={e => u({ tipoIsolamento: e.target.value })}>
-                  <option value="">Selecione...</option>
-                  {TIPOS_ISOLAMENTO.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Leito(s) / Paciente(s) *</label>
-                <input required type="text" placeholder="Ex: Leito 12 – João Silva" className="w-full border border-slate-300 p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 bg-slate-50"
-                  value={form.leitosPaciente} onChange={e => u({ leitosPaciente: e.target.value })} />
-                <p className="text-[10px] text-slate-500 mt-1 ml-1">Separe por vírgulas se for mais de um.</p>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Observações</label>
-                <textarea rows="2" className="w-full border border-slate-300 p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 bg-slate-50 resize-none"
-                  placeholder="Precauções adicionais..." value={form.textoLivre} onChange={e => u({ textoLivre: e.target.value })} />
-              </div>
-            </>
-          )}
-
-          {tipoDef.tipo === 'leitos' && (
-            <>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Leito(s) / Paciente(s) *</label>
-                <input required type="text" placeholder="Ex: Leito 12 – João Silva" className="w-full border border-slate-300 p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 bg-slate-50"
-                  value={form.leitosPaciente} onChange={e => u({ leitosPaciente: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Observações</label>
-                <textarea rows="2" className="w-full border border-slate-300 p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 bg-slate-50 resize-none"
-                  placeholder="Detalhes adicionais..." value={form.textoLivre} onChange={e => u({ textoLivre: e.target.value })} />
-              </div>
-            </>
-          )}
-
-          {tipoDef.tipo === 'material' && (
-            <>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Descrição do Material *</label>
-                <input required type="text" placeholder="Ex: Luvas descartáveis M, sonda vesical 14Fr" className="w-full border border-slate-300 p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 bg-slate-50"
-                  value={form.materialDescricao} onChange={e => u({ materialDescricao: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Impacto na Assistência</label>
-                <textarea rows="2" className="w-full border border-slate-300 p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 bg-slate-50 resize-none"
-                  placeholder="Descreva o impacto ou urgência..." value={form.impacto} onChange={e => u({ impacto: e.target.value })} />
-              </div>
-            </>
-          )}
-
-          {tipoDef.tipo === 'livre' && (
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Informação *</label>
-              <textarea required rows="5" className="w-full border border-slate-300 p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 bg-slate-50 resize-none"
-                placeholder="Descreva a situação ou informação relevante para a equipa..." value={form.textoLivre} onChange={e => u({ textoLivre: e.target.value })} />
-            </div>
-          )}
-
-          <div className="flex justify-between items-center pt-4 border-t border-slate-100">
-            {dadosExistentes ? (
-              <button type="button" onClick={onRemover} className="text-rose-600 font-bold px-4 py-2 hover:bg-rose-50 rounded-lg transition-colors text-sm">Remover Alerta</button>
-            ) : <div />}
-            <div className="flex gap-2">
-              <button type="button" onClick={onCancelar} className="text-slate-500 font-bold px-4 py-2 hover:bg-slate-100 rounded-lg transition-colors text-sm">Cancelar</button>
-              <button type="submit" className="bg-orange-500 text-white font-bold px-6 py-2 rounded-xl hover:bg-orange-600 shadow-sm transition-colors text-sm">Salvar</button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
+// ModalAlerta importado de ../components/plantao/ModalAlerta
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function PlantaoDiario({ setPagina }) {
@@ -588,84 +476,21 @@ export default function PlantaoDiario({ setPagina }) {
 
           {/* ── Gestão de Leitos + Alertas ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-              <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg mb-6"><BedDouble className="text-indigo-500"/> Gestão de Leitos</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-center">
-                  <p className="text-slate-500 text-xs font-bold uppercase">Leitos Totais</p>
-                  <p className="text-3xl font-black text-slate-800 mt-2">{leitosTotais}</p>
-                </div>
-                <div className="bg-emerald-50 p-4 rounded-xl shadow-sm border border-emerald-100 text-center">
-                  <p className="text-emerald-700 text-xs font-bold uppercase">Leitos Vagos</p>
-                  <p className="text-3xl font-black text-emerald-600 mt-2">{Math.max(0, leitosVagos)}</p>
-                </div>
-                <div className="bg-blue-50 p-4 rounded-xl shadow-sm border border-blue-100 text-center">
-                  <p className="text-blue-700 text-xs font-bold uppercase mb-2">Ocupados</p>
-                  <input disabled={isReadOnly} type="number" min="0" className="w-full text-center text-2xl font-black text-blue-800 border-none bg-white p-2 rounded-lg shadow-inner outline-none focus:ring-2 focus:ring-blue-400" value={ocupados} onChange={e => { setOcupados(parseInt(e.target.value) || 0); registrarAtualizacao(); }}/>
-                </div>
-                <div className="bg-rose-50 p-4 rounded-xl shadow-sm border border-rose-100 text-center">
-                  <p className="text-rose-700 text-xs font-bold uppercase mb-2">Bloqueados</p>
-                  <input disabled={isReadOnly} type="number" min="0" className="w-full text-center text-2xl font-black text-rose-800 border-none bg-white p-2 rounded-lg shadow-inner outline-none focus:ring-2 focus:ring-rose-400" value={bloqueados} onChange={e => { setBloqueados(parseInt(e.target.value) || 0); registrarAtualizacao(); }}/>
-                </div>
-              </div>
-            </div>
+            <GestaoLeitosCard
+              leitosTotais={leitosTotais}
+              ocupados={ocupados}
+              bloqueados={bloqueados}
+              onChangeOcupados={(v) => { setOcupados(v); registrarAtualizacao(); }}
+              onChangeBloqueados={(v) => { setBloqueados(v); registrarAtualizacao(); }}
+              isReadOnly={isReadOnly}
+            />
 
-            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg"><AlertCircle className="text-orange-500"/> Alertas da Unidade</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Registre situações que requerem atenção da supervisão.</p>
-                </div>
-                <div className="relative print:hidden" ref={dropRef}>
-                  <button disabled={isReadOnly} onClick={() => setDropdownAberto(v => !v)} className="flex items-center gap-2 bg-orange-500 text-white font-bold px-4 py-2 rounded-xl hover:bg-orange-600 transition-colors text-sm shadow-sm disabled:opacity-50">
-                    <Plus size={16}/> Incluir Alerta <ChevronDown size={14} className={`transition-transform ${dropdownAberto ? 'rotate-180' : ''}`}/>
-                  </button>
-                  {dropdownAberto && !isReadOnly && (
-                    <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 z-30 min-w-[220px] overflow-hidden">
-                      {TIPOS_ALERTA.map(tipo => {
-                        const Icon = tipo.icon;
-                        const count = alertas.filter(a => a.tipoDef.id === tipo.id).length;
-                        return (
-                          <button key={tipo.id} onClick={() => abrirNovoAlerta(tipo)} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold hover:bg-orange-50 text-left transition-colors border-b border-slate-100 last:border-0 ${count > 0 ? 'text-orange-600' : 'text-slate-700'}`}>
-                            <Icon size={16} className={count > 0 ? 'text-orange-500' : 'text-slate-400'}/> {tipo.label}
-                            {count > 0 && <span className="ml-auto bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{count}</span>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {alertas.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-slate-400 py-8">
-                  <ShieldAlert size={36} className="mb-2"/>
-                  <p className="text-sm font-medium">Nenhum alerta registado</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2 overflow-y-auto max-h-48 pr-1">
-                  {alertas.map(a => {
-                    const Icon = a.tipoDef.icon;
-                    const resumo = a.dados.leitosPaciente || a.dados.quaisLeitos || a.dados.materialDescricao || a.dados.textoLivre || '';
-                    const clsMap = { isolamento: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800', iconBg: 'bg-orange-100', iconText: 'text-orange-600', badgeBg: 'bg-orange-200' }, material: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', iconBg: 'bg-red-100', iconText: 'text-red-600', badgeBg: 'bg-red-200' }, leitos: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', iconBg: 'bg-blue-100', iconText: 'text-blue-600', badgeBg: 'bg-blue-200' }, livre: { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-800', iconBg: 'bg-slate-100', iconText: 'text-slate-600', badgeBg: 'bg-slate-200' } };
-                    const c = clsMap[a.tipoDef.tipo] || clsMap['livre'];
-                    return (
-                      <div key={a.uid} className={`flex items-start gap-3 ${c.bg} border ${c.border} p-3 rounded-xl transition-all`}>
-                        <div className={`${c.iconBg} p-2 rounded-lg ${c.iconText} mt-0.5`}><Icon size={16}/></div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className={`text-sm font-bold ${c.text}`}>{a.tipoDef.label}</p>
-                            {a.tipoDef.tipo === 'isolamento' && a.dados.tipoIsolamento && <span className={`${c.badgeBg} ${c.text} text-[10px] px-2 py-0.5 rounded-full font-bold truncate`}>{a.dados.tipoIsolamento}</span>}
-                          </div>
-                          {resumo && <p className={`text-xs ${c.iconText} truncate mt-0.5`}>{resumo}</p>}
-                        </div>
-                        {!isReadOnly && <button onClick={() => abrirEditarAlerta(a)} className={`text-[11px] ${c.iconText} font-semibold hover:underline shrink-0 mt-0.5 print:hidden`}>Editar</button>}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <AlertasUnidadeCard
+              alertas={alertas}
+              onNovoAlerta={abrirNovoAlerta}
+              onEditarAlerta={abrirEditarAlerta}
+              isReadOnly={isReadOnly}
+            />
           </div>
 
           {/* Ação Final */}

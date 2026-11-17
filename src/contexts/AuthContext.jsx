@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../supabase'; 
+import { isNominal } from '../config/ambiente';
 
 const AuthContext = createContext({});
 
@@ -8,7 +9,8 @@ export const PERFIS = {
   CHEFE_2: "Liderança",
   CHEFE_3: "Supervisão",
   ADMIN: "Administrativo",
-  COLABORADOR: "Colaborador"
+  COLABORADOR: "Colaborador",
+  UNIDADE: "Unidade",
 };
 
 export const AuthProvider = ({ children }) => {
@@ -40,13 +42,14 @@ export const AuthProvider = ({ children }) => {
         .eq('id', currentSession.user.id)
         .maybeSingle();
 
-      let nomeReal = currentSession.user.email;
+      let nomeReal = perfilData?.nome || perfilData?.Nome || currentSession.user.user_metadata?.unidade || currentSession.user.email;
       let unidadeDoColaborador = null;
       let cargoDoColaborador = null;
       
       let matriculaPerfil = perfilData?.matricula || perfilData?.Matricula;
-      let rolePerfil = perfilData?.role || perfilData?.Role || 'Colaborador';
-      let unidadePerfil = perfilData?.unidade || perfilData?.Unidade || null;
+      let rolePerfil = perfilData?.role || perfilData?.Role || (isNominal ? 'Colaborador' : 'Unidade');
+      let unidadePerfil = perfilData?.unidade || perfilData?.Unidade || currentSession.user.user_metadata?.unidade || null;
+      let unidadeIdPerfil = perfilData?.unidade_id || null;
       
       // Fallback de segurança apenas para o admin de configuração inicial
       if (currentSession.user.email === 'admin@teste.com' && !matriculaPerfil) {
@@ -55,9 +58,14 @@ export const AuthProvider = ({ children }) => {
       }
       
       // Identificador inteligente de poderes
-      const isGestorAltoNivel = rolePerfil.includes('Administrador') || rolePerfil.includes('Diretor');
-// Busca dados complementares do colaborador na tabela 'colaboradores'
-      if (matriculaPerfil) {
+      const isGestorAltoNivel =
+        rolePerfil.includes('Administrador') ||
+        rolePerfil.includes('Diretor') ||
+        rolePerfil.includes('Supervisão');
+
+      // No modo NOMINAL (V1 Demo), busca dados complementares na tabela 'colaboradores'.
+      // No modo QUANTITATIVO (V2 Produção), NUNCA consulta a tabela 'colaboradores'.
+      if (isNominal && matriculaPerfil) {
         const { data: colabData, error: colabError } = await supabase
           .from('colaboradores')
           .select('*')
@@ -65,26 +73,21 @@ export const AuthProvider = ({ children }) => {
           .maybeSingle();
           
         if (!colabError && colabData) {
-          // Extrai o nome, unidade e cargo
           nomeReal = colabData.nome_completo || colabData.Nome_Completo || colabData.nome || nomeReal;
           unidadeDoColaborador = colabData.unidade_alocacao || colabData.Unidade_Alocacao || colabData.setor || colabData.Setor || null;
           cargoDoColaborador = colabData.cargo || colabData.Categoria_Profissional || colabData.categoria_profissional || null;
           
-          // TRAVA DE ACESSO: Plantão Assistencial exclusivo para Enfermeiros (DENTRO DO ESCOPO)
           if (rolePerfil === 'Plantão Assistencial') {
             const isEnfermeiro = colabData.cargo?.toLowerCase().includes('enferm') || 
                                  colabData.categoria_profissional?.toLowerCase().includes('enferm');
             if (!isEnfermeiro) {
               console.warn("Acesso negado: Perfil Plantão Assistencial é exclusivo para enfermeiros. Rebaixando acesso.");
-              rolePerfil = 'Colaborador'; // Rebaixa para visão básica
+              rolePerfil = 'Colaborador';
             }
           }
-
-        } else {
-          console.warn("Aviso: Não foi possível buscar o nome do colaborador ou unidade. Usando email da sessão.");
         }
       }
-      // 3. Busca e filtra setores onde o usuário é chefe ou diretor
+      // 3. Busca e filtra setores onde o usuário é chefe, diretor ou unidade vinculada
       let setoresArray = [];
       let setoresDetalhesArray = [];
 
@@ -93,12 +96,19 @@ export const AuthProvider = ({ children }) => {
         .select('*');
 
       if (!setoresError && setoresData) {
+        if (unidadeIdPerfil && !unidadePerfil) {
+          const setorVinc = setoresData.find(s => s.id === unidadeIdPerfil);
+          if (setorVinc) {
+            unidadePerfil = setorVinc.nome_oficial || setorVinc.Nome_Oficial || setorVinc.nome;
+          }
+        }
+
         setoresDetalhesArray = setoresData.filter(setor => {
           const status = (setor.status || setor.Status || '').toUpperCase();
           if (status !== 'ATIVO') return false;
 
-          // Se for Admin ou Diretor, aprova automaticamente todos os setores!
           if (isGestorAltoNivel) return true;
+          if (unidadeIdPerfil && setor.id === unidadeIdPerfil) return true;
 
           const nomeChefe = (setor.enf_chefe || setor.Enf_Chefe || '').toLowerCase().trim();
           const nomeDiretor = (setor.diretor_area || setor.Diretor_Area || '').toLowerCase().trim();
@@ -118,10 +128,13 @@ export const AuthProvider = ({ children }) => {
         perfil_secundario: perfilData?.perfil_secundario || perfilData?.Perfil_Secundario || '',
         perfis: [rolePerfil, perfilData?.perfil_secundario || perfilData?.Perfil_Secundario].filter(Boolean),
         nome: nomeReal,
+        unidadeId: unidadeIdPerfil,
         unidadeLogada: isGestorAltoNivel ? 'Global' : ((setoresArray && setoresArray.length > 0) ? setoresArray[0] : (unidadeDoColaborador || unidadePerfil || "")),
         matricula: matriculaPerfil || null,
         setores: setoresArray,
-        setores_detalhes: setoresDetalhesArray
+        setores_detalhes: setoresDetalhesArray,
+        acesso_v1: perfilData?.acesso_v1,
+        acesso_v2: perfilData?.acesso_v2,
       });
       
       setSession(currentSession);

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, PERFIS } from '../contexts/AuthContext';
+import BannerAmbiente from './BannerAmbiente';
+import { isNominal } from '../config/ambiente';
 import {
   LayoutDashboard,
   ClipboardCheck,
@@ -49,6 +51,7 @@ export default function Layout() {
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
+      <BannerAmbiente />
 
       {/* ── HEADER ──────────────────────────────────────────────────────── */}
       <header className="bg-white border-b border-slate-200 shadow-sm flex-shrink-0">
@@ -109,13 +112,14 @@ export default function Layout() {
       {/* ── MAIN CONTENT ────────────────────────────────────────────────── */}
       <main className="flex-1 overflow-auto p-6 bg-slate-50/60">
         <div className="max-w-[1600px] mx-auto flex flex-col gap-6">
-          {/* Banner Azul de Identificação Pessoal */}
-          <div className="bg-indigo-600 text-white rounded-3xl px-6 py-4 shadow-lg flex items-center gap-4 flex-shrink-0">
+          {/* Banner Azul de Identificação */}
+          <div className="bg-indigo-600 text-white rounded-3xl px-6 py-4 shadow-lg flex items-center gap-4 flex-shrink-0 print:hidden">
             <div className="bg-white/20 w-12 h-12 rounded-2xl shadow-inner flex items-center justify-center flex-shrink-0"><User size={24} /></div>
             <div>
               <h2 className="text-lg font-black tracking-tight leading-tight">{user.nome}</h2>
               <p className="text-indigo-100 font-bold text-sm opacity-90">
-                {user.cargo || user.role} — Setor: {user.unidadeLogada} — Mat: {user.matricula}
+                {user.cargo || user.role} — Unidade: {user.unidadeLogada || 'Global'}
+                {isNominal && user.matricula ? ` — Mat: ${user.matricula}` : ''}
               </p>
             </div>
           </div>

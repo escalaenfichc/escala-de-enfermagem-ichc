@@ -14,13 +14,14 @@ import DashboardGlobal from './pages/DashboardGlobal';
 import Indicadores from './pages/Indicadores';
 import AdminConfig from './pages/AdminConfig';
 import MeuPainel from './pages/MeuPainel';
+import { isNominal } from './config/ambiente';
 
 // ────────────────────────────────────────────────────────────────────────────
 // GRUPOS DE PERMISSÕES (Mantém as rotas JSX limpas e fáceis de ler)
 // ────────────────────────────────────────────────────────────────────────────
 const GESTAO_ALTA = [PERFIS.ADMIN, 'Administrador', 'Diretor'];
-const GESTAO_MEDIA = [...GESTAO_ALTA, PERFIS.CHEFE_3];
-const OPERACIONAL = [...GESTAO_MEDIA, PERFIS.CHEFE_2, PERFIS.CHEFE_1];
+const GESTAO_MEDIA = [...GESTAO_ALTA, PERFIS.CHEFE_3, 'Supervisão Plantonista'];
+const OPERACIONAL = [...GESTAO_MEDIA, PERFIS.CHEFE_2, PERFIS.CHEFE_1, PERFIS.UNIDADE, 'Unidade', 'Enf. Assistencial', 'Liderança 1', 'Enf. Liderança 1', 'Liderança 2', 'Enf. Liderança 2'];
 const TODOS_USUARIOS = [...OPERACIONAL, PERFIS.COLABORADOR, 'Secretaria'];
 
 function AppRoutes() {
@@ -31,15 +32,16 @@ function AppRoutes() {
   // ────────────────────────────────────────────────────────────────────────────
   const getHomeRoute = () => {
     if (!user) return '/login';
+    if (!isNominal) return '/planejamento';
     
     const role = user.role || '';
     const email = user.email || '';
 
     // 1. Alta Gestão e Lideranças: Aterram na Gestão Operacional (Fazer Escala)
-    if (role.includes('Administrador') || role.includes('Diretor') || role.includes(PERFIS.CHEFE_1) || role.includes(PERFIS.CHEFE_2) || email === 'admin@teste.com') {
+    if (role.includes('Administrador') || role.includes('Diretor') || role.includes(PERFIS.CHEFE_1) || role.includes(PERFIS.CHEFE_2) || role.includes('Unidade') || email === 'admin@teste.com') {
       return '/planejamento';
     }
-    if (role.includes(PERFIS.CHEFE_3)) return '/dashboard-global';
+    if (role.includes(PERFIS.CHEFE_3)) return '/planejamento';
     
     // 3. Assistencial / Resto: Aterra no Espaço Pessoal
     return '/meu-painel';
