@@ -42,7 +42,7 @@ export default function ConfigDimensionamentoAdmin() {
       listaSetores.forEach((s) => {
         const key = s.id || s.nome;
         inicial[key] = {
-          leitos: s.leitos_operacionais ?? 30,
+          leitos: s.leitos_operacionais ?? 0,
           MANHA: {
             ENF: obterMinimoDimensionamento(dim, s.id, s.nome, 'MANHA', 'ENF'),
             TEC: obterMinimoDimensionamento(dim, s.id, s.nome, 'MANHA', 'TEC'),
@@ -174,10 +174,10 @@ export default function ConfigDimensionamentoAdmin() {
             {filtrados.map((s) => {
               const key = s.id || s.nome;
               const cfg = editMap[key] || {
-                leitos: 30,
-                MANHA: { ENF: 2, TEC: 6 },
-                TARDE: { ENF: 2, TEC: 6 },
-                NOITE: { ENF: 2, TEC: 6 },
+                leitos: 0,
+                MANHA: { ENF: 0, TEC: 0 },
+                TARDE: { ENF: 0, TEC: 0 },
+                NOITE: { ENF: 0, TEC: 0 },
               };
               return (
                 <tr key={key} className="hover:bg-slate-50/70">

@@ -3,8 +3,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarDays,
-  Moon,
-  Sun,
   CalendarClock,
   Building2,
 } from 'lucide-react';
@@ -18,7 +16,10 @@ import {
   carregarTodoDimensionamento,
   obterMinimoDimensionamento,
   carregarHistoricoRundown,
+  carregarDiurno12Dia,
   carregarAfastamentosSetor,
+  carregarEscaladosMensal,
+  obterEscaladosSalvosNoDia,
   calcularTotaisCategoria,
   calcularAfastamentosProjetadosNoDia,
 } from '../../services/rundownService';
@@ -38,14 +39,16 @@ const MESES = [
   'Dezembro',
 ];
 
-export default function CalendarioMensal({ setorFiltro }) {
+export default function CalendarioMensal({ setorFiltro, ocultarSeletorUnidade = false }) {
   const [mesAtual, setMesAtual] = useState(new Date());
   const [turno, setTurno] = useState('MANHA');
   const [setores, setSetores] = useState([]);
   const [setorNome, setSetorNome] = useState('');
   const [mapaDim, setMapaDim] = useState({});
   const [registros, setRegistros] = useState([]);
+  const [mapaDiurno12, setMapaDiurno12] = useState({});
   const [afastamentos, setAfastamentos] = useState([]);
+  const [escaladosMes, setEscaladosMes] = useState(null);
 
   useEffect(() => {
     async function init() {
@@ -71,22 +74,34 @@ export default function CalendarioMensal({ setorFiltro }) {
     [setores, setorNome]
   );
 
+  const ano = mesAtual.getFullYear();
+  const mesIdx0 = mesAtual.getMonth();
+  const mesAnoStr = `${ano}-${String(mesIdx0 + 1).padStart(2, '0')}`;
+  const nomeMes = `${MESES[mesIdx0]} ${ano}`;
+  const diasMes = new Date(ano, mesIdx0 + 1, 0).getDate();
+  const primeiroDiaSemana = new Date(ano, mesIdx0, 1).getDay();
+
   useEffect(() => {
     if (!setorNome) return;
     Promise.all([
       carregarHistoricoRundown(setorObj?.id, setorNome),
       carregarAfastamentosSetor(setorObj?.id, setorNome),
-    ]).then(([hist, afast]) => {
+      carregarEscaladosMensal(setorObj?.id, setorNome, mesAnoStr),
+    ]).then(async ([hist, afast, escMes]) => {
       setRegistros(hist);
       setAfastamentos(afast);
-    });
-  }, [setorNome, setorObj?.id]);
+      setEscaladosMes(escMes);
 
-  const ano = mesAtual.getFullYear();
-  const mesIdx0 = mesAtual.getMonth();
-  const nomeMes = `${MESES[mesIdx0]} ${ano}`;
-  const diasMes = new Date(ano, mesIdx0 + 1, 0).getDate();
-  const primeiroDiaSemana = new Date(ano, mesIdx0, 1).getDay();
+      // Carrega Diurno 12h dos dias em que há registro no mês
+      const regsDoMes = hist.filter((r) => (r.data_plantao || '').startsWith(mesAnoStr));
+      const datasUnicas = Array.from(new Set(regsDoMes.map((r) => r.data_plantao)));
+      const d12Map = {};
+      for (const dt of datasUnicas) {
+        d12Map[dt] = await carregarDiurno12Dia(setorObj?.id, setorNome, dt);
+      }
+      setMapaDiurno12(d12Map);
+    });
+  }, [setorNome, setorObj?.id, mesAnoStr]);
 
   const minENF = obterMinimoDimensionamento(mapaDim, setorObj?.id, setorNome, turno, 'ENF');
   const minTEC = obterMinimoDimensionamento(mapaDim, setorObj?.id, setorNome, turno, 'TEC');
@@ -113,66 +128,100 @@ export default function CalendarioMensal({ setorFiltro }) {
         'TEC'
       );
 
+      // Escalados cadastrados na aba "Inserir Quantidade de Escalados"
+      const escSalvo = obterEscaladosSalvosNoDia(escaladosMes, dia, turno);
+
       if (reg) {
+        const d12 = mapaDiurno12[dataStr] || criarQuadroVazio();
         const enf = calcularTotaisCategoria({
           cat: 'ENF',
           turno,
           quadroTurno: reg.quadro || criarQuadroVazio(),
-          quadroDiurno12: criarQuadroVazio(),
+          quadroDiurno12: d12,
           minimo: minENF,
         });
         const tec = calcularTotaisCategoria({
           cat: 'TEC',
           turno,
           quadroTurno: reg.quadro || criarQuadroVazio(),
-          quadroDiurno12: criarQuadroVazio(),
+          quadroDiurno12: d12,
           minimo: minTEC,
         });
+
+        // Se no registro diário o escalado ficou 0 mas há escalado salvo na aba de Escalados, usa o salvo
+        const enfEscFinal = enf.escalados > 0 ? enf.escalados : escSalvo.ENF.total;
+        const tecEscFinal = tec.escalados > 0 ? tec.escalados : escSalvo.TEC.total;
+        const enfPresFinal =
+          enf.escalados > 0
+            ? enf.presentes
+            : Math.max(0, enfEscFinal - enf.totalFaltas + enf.recebidos - enf.cedidos);
+        const tecPresFinal =
+          tec.escalados > 0
+            ? tec.presentes
+            : Math.max(0, tecEscFinal - tec.totalFaltas + tec.recebidos - tec.cedidos);
+
         return {
           dia,
           dataStr,
           preenchido: true,
+          temEscaladoSalvo: true,
           equipeNoite: calcularEquipeNoite(dataStr),
           enf: {
             min: minENF,
-            esc: enf.escalados,
-            pres: enf.presentes,
+            esc: enfEscFinal,
+            pres: enfPresFinal,
             aus: enf.totalFaltas,
             afastProj: afastENF,
           },
           tec: {
             min: minTEC,
-            esc: tec.escalados,
-            pres: tec.presentes,
+            esc: tecEscFinal,
+            pres: tecPresFinal,
             aus: tec.totalFaltas,
             afastProj: afastTEC,
           },
         };
       }
 
-      // Dia futuro/sem Rundown lançado: mostra Necessários (Fixo ADM) e Afastamentos Projetados
+      // Sem Rundown diário lançado ainda: reflete exatamente os Escalados salvos na tabela + Afastamentos projetados
+      const enfEsc = escSalvo.ENF.total;
+      const tecEsc = escSalvo.TEC.total;
+      const temEscaladoSalvo = enfEsc > 0 || tecEsc > 0;
+
       return {
         dia,
         dataStr,
         preenchido: false,
+        temEscaladoSalvo,
         equipeNoite: calcularEquipeNoite(dataStr),
         enf: {
           min: minENF,
-          esc: minENF,
-          pres: Math.max(0, minENF - afastENF),
+          esc: enfEsc,
+          pres: Math.max(0, enfEsc - afastENF),
           aus: afastENF,
           afastProj: afastENF,
         },
         tec: {
           min: minTEC,
-          esc: minTEC,
-          pres: Math.max(0, minTEC - afastTEC),
+          esc: tecEsc,
+          pres: Math.max(0, tecEsc - afastTEC),
           aus: afastTEC,
           afastProj: afastTEC,
         },
       };
     });
-  }, [diasMes, ano, mesIdx0, registros, afastamentos, turno, minENF, minTEC]);
+  }, [
+    diasMes,
+    ano,
+    mesIdx0,
+    registros,
+    mapaDiurno12,
+    afastamentos,
+    escaladosMes,
+    turno,
+    minENF,
+    minTEC,
+  ]);
 
   const prevMonth = () => setMesAtual(new Date(ano, mesIdx0 - 1, 1));
   const nextMonth = () => setMesAtual(new Date(ano, mesIdx0 + 1, 1));
@@ -182,28 +231,30 @@ export default function CalendarioMensal({ setorFiltro }) {
       <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4 border-b border-slate-100 pb-4">
         <div>
           <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
-            <CalendarDays className="text-indigo-600" /> Planejamento Quantitativo Mensal & Projeção de Afastamentos
+            <CalendarDays className="text-indigo-600" /> Calendário Quantitativo Mensal — {setorNome}
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Integra os Rundowns lançados e projeta automaticamente os atestados/afastamentos previstos nos dias seguintes.
+            Reflete os <strong>Escalados</strong> salvos pela unidade, os <strong>Rundowns Diários</strong> e os <strong>Afastamentos Projetados</strong> (sem dados fictícios).
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Building2 size={15} className="text-slate-400" />
-            <select
-              value={setorNome}
-              onChange={(e) => setSetorNome(e.target.value)}
-              className="border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 bg-slate-50"
-            >
-              {setores.map((s) => (
-                <option key={s.id || s.nome} value={s.nome}>
-                  {s.sigla ? `${s.sigla} — ${s.nome}` : s.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+          {!ocultarSeletorUnidade && (
+            <div className="flex items-center gap-2">
+              <Building2 size={15} className="text-slate-400" />
+              <select
+                value={setorNome}
+                onChange={(e) => setSetorNome(e.target.value)}
+                className="border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 bg-slate-50"
+              >
+                {setores.map((s) => (
+                  <option key={s.id || s.nome} value={s.nome}>
+                    {s.sigla ? `${s.sigla} — ${s.nome}` : s.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <select
             value={turno}
@@ -256,15 +307,24 @@ export default function CalendarioMensal({ setorFiltro }) {
         ))}
 
         {cards.map((c) => {
-          const hasShortage = c.enf.pres < c.enf.min || c.tec.pres < c.tec.min;
+          const ativo = c.preenchido || c.temEscaladoSalvo;
+          const hasShortage =
+            ativo &&
+            ((c.enf.min > 0 && c.enf.pres < c.enf.min) ||
+              (c.tec.min > 0 && c.tec.pres < c.tec.min));
           const temProjecao = c.enf.afastProj > 0 || c.tec.afastProj > 0;
+
           const bgClass = c.preenchido
             ? hasShortage
               ? 'bg-rose-50 border-rose-300'
               : 'bg-emerald-50 border-emerald-300'
+            : c.temEscaladoSalvo
+            ? hasShortage
+              ? 'bg-amber-50 border-amber-300'
+              : 'bg-sky-50/70 border-sky-200'
             : temProjecao
-            ? 'bg-amber-50/70 border-amber-300'
-            : 'bg-slate-50/70 border-slate-200';
+            ? 'bg-amber-50/50 border-amber-200'
+            : 'bg-slate-50/60 border-slate-200';
 
           return (
             <div
@@ -284,7 +344,12 @@ export default function CalendarioMensal({ setorFiltro }) {
                   {c.preenchido ? (
                     <span
                       className="w-2 h-2 rounded-full bg-emerald-500"
-                      title="Rundown preenchido"
+                      title="Rundown diário preenchido"
+                    />
+                  ) : c.temEscaladoSalvo ? (
+                    <span
+                      className="w-2 h-2 rounded-full bg-sky-500"
+                      title="Escalados cadastrados pela unidade"
                     />
                   ) : temProjecao ? (
                     <CalendarClock

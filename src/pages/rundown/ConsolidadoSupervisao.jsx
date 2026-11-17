@@ -115,7 +115,7 @@ export default function ConsolidadoSupervisao({ onAbrirUnidade }) {
         'TEC'
       );
 
-      const leitosTotais = reg?.leitos_totais || s.leitos_operacionais || 30;
+      const leitosTotais = reg?.leitos_totais || s.leitos_operacionais || 0;
       const ocupados = reg?.ocupados || 0;
       const bloqueados = reg?.bloqueados || 0;
       const vagos = Math.max(0, leitosTotais - (ocupados + bloqueados));

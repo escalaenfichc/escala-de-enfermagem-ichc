@@ -17,6 +17,8 @@ import {
   CheckCircle2,
   Info,
   Printer,
+  Users,
+  CalendarDays,
 } from 'lucide-react';
 import {
   TURNOS_RUNDOWN,
@@ -28,6 +30,8 @@ import {
 import GestaoLeitosCard from '../../components/plantao/GestaoLeitosCard';
 import AlertasUnidadeCard from '../../components/plantao/AlertasUnidadeCard';
 import ModalAlerta from '../../components/plantao/ModalAlerta';
+import AbaEscaladosUnidade from './AbaEscaladosUnidade';
+import CalendarioMensal from './CalendarioMensal';
 import {
   carregarSetoresAtivos,
   carregarTodoDimensionamento,
@@ -40,6 +44,8 @@ import {
   excluirAfastamentoPrevisto,
   calcularAfastamentosProjetadosNoDia,
   calcularTotaisCategoria,
+  carregarEscaladosMensal,
+  obterEscaladosSalvosNoDia,
 } from '../../services/rundownService';
 
 function hojeISO() {
@@ -58,6 +64,9 @@ export default function Rundown({ setorFiltro }) {
   const [mapaDim, setMapaDim] = useState({});
   const [setorSelecionadoNome, setSetorSelecionadoNome] = useState('');
   const [loadingInicial, setLoadingInicial] = useState(true);
+
+  // Aba interna do Rundown: 'PLANTAO' | 'ESCALADOS' | 'CALENDARIO'
+  const [abaRundown, setAbaRundown] = useState('PLANTAO');
 
   // Fluxo Lobby vs Formulário
   const [viewAtual, setViewAtual] = useState('lobby'); // 'lobby' | 'form'
@@ -125,7 +134,7 @@ export default function Rundown({ setorFiltro }) {
     [setores, setorSelecionadoNome]
   );
 
-  const leitosTotaisSetor = registroAtivo?.leitos_totais || setorAtualObj?.leitos_operacionais || 30;
+  const leitosTotaisSetor = registroAtivo?.leitos_totais || setorAtualObj?.leitos_operacionais || 0;
 
   // Carrega histórico e afastamentos da unidade selecionada
   const recarregarDadosUnidade = async () => {
@@ -175,9 +184,30 @@ export default function Rundown({ setorFiltro }) {
     setRegistroAtivo(null);
     setIsReadOnly(false);
     setDataSelecionada(hoje);
-    setQuadroTurno(criarQuadroVazio());
-    const d12 = await carregarDiurno12Dia(setorAtualObj?.id, setorSelecionadoNome, hoje);
-    setQuadroDiurno12(d12 || criarQuadroVazio());
+
+    // Busca os Escalados salvos na aba "Inserir Quantidade de Escalados" para pré-preencher o dia
+    const mesAnoHoje = hoje.slice(0, 7);
+    const diaHojeNum = parseInt(hoje.split('-')[2], 10);
+    const [d12Salvo, regEscMes] = await Promise.all([
+      carregarDiurno12Dia(setorAtualObj?.id, setorSelecionadoNome, hoje),
+      carregarEscaladosMensal(setorAtualObj?.id, setorSelecionadoNome, mesAnoHoje),
+    ]);
+
+    const escDia = obterEscaladosSalvosNoDia(regEscMes, diaHojeNum, turno);
+    const qBaseInicial = criarQuadroVazio();
+    qBaseInicial.ENF.escalados = escDia.ENF.base;
+    qBaseInicial.TEC.escalados = escDia.TEC.base;
+    setQuadroTurno(qBaseInicial);
+
+    const qD12Inicial = d12Salvo || criarQuadroVazio();
+    if (!qD12Inicial.ENF?.escalados && escDia.ENF.diurno12 > 0) {
+      qD12Inicial.ENF = { ...(qD12Inicial.ENF || {}), escalados: escDia.ENF.diurno12 };
+    }
+    if (!qD12Inicial.TEC?.escalados && escDia.TEC.diurno12 > 0) {
+      qD12Inicial.TEC = { ...(qD12Inicial.TEC || {}), escalados: escDia.TEC.diurno12 };
+    }
+    setQuadroDiurno12(qD12Inicial);
+
     setOcupados(0);
     setBloqueados(0);
     setAlertas([]);
@@ -376,47 +406,106 @@ export default function Rundown({ setorFiltro }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* ── BARRA DE SELEÇÃO DA UNIDADE (A PARTIR DA LISTA) ── */}
-      <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-            <Building2 size={20} />
+      {/* ── BARRA DE SELEÇÃO DA UNIDADE (A PARTIR DA LISTA) + ABAS INTERNAS DO RUNDOWN ── */}
+      <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-4 print:hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <Building2 size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg font-extrabold text-slate-800">
+                Rundown da Unidade (Quantitativo)
+              </h2>
+              <p className="text-xs text-slate-500">
+                Preenchimento de escalados, plantão diário por turno, gestão de leitos, alertas e projeção de afastamentos.
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-extrabold text-slate-800">
-              Rundown Diário da Unidade (Quantitativo)
-            </h2>
-            <p className="text-xs text-slate-500">
-              Preenchimento numérico por turno, gestão de leitos, alertas e projeção de afastamentos (sem dados nominais).
-            </p>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Unidade Assistencial *
+              </label>
+              <select
+                value={setorSelecionadoNome}
+                onChange={(e) => {
+                  setSetorSelecionadoNome(e.target.value);
+                  setViewAtual('lobby');
+                }}
+                className="bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3.5 py-2.5 font-bold outline-none focus:ring-2 focus:ring-indigo-500 min-w-[260px]"
+              >
+                {setores.map((s) => (
+                  <option key={s.id || s.nome} value={s.nome}>
+                    {s.sigla ? `${s.sigla} — ${s.nome}` : s.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-              Unidade Assistencial *
-            </label>
-            <select
-              value={setorSelecionadoNome}
-              onChange={(e) => {
-                setSetorSelecionadoNome(e.target.value);
-                setViewAtual('lobby');
-              }}
-              className="bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3.5 py-2.5 font-bold outline-none focus:ring-2 focus:ring-indigo-500 min-w-[260px]"
-            >
-              {setores.map((s) => (
-                <option key={s.id || s.nome} value={s.nome}>
-                  {s.sigla ? `${s.sigla} — ${s.nome}` : s.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Sub-abas da tela Rundown */}
+        <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={() => setAbaRundown('PLANTAO')}
+            className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all ${
+              abaRundown === 'PLANTAO'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <ClipboardCheck size={15} /> 1. Lançamento do Plantão (Rundown Diário)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAbaRundown('ESCALADOS')}
+            className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all ${
+              abaRundown === 'ESCALADOS'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <Users size={15} /> 2. Inserir Quantidade de Escalados
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAbaRundown('CALENDARIO')}
+            className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all ${
+              abaRundown === 'CALENDARIO'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <CalendarDays size={15} /> 3. Calendário Mensal (Escalados & Projeção)
+          </button>
         </div>
       </div>
 
-      {/* ── VIEW 1: LOBBY (HISTÓRICO DA UNIDADE) ── */}
-      {viewAtual === 'lobby' && (
+      {/* ── ABA 2: INSERIR QUANTIDADE DE ESCALADOS ── */}
+      {abaRundown === 'ESCALADOS' && (
+        <AbaEscaladosUnidade
+          setorId={setorAtualObj?.id}
+          setorNome={setorSelecionadoNome}
+          responsavelPadrao={responsavelNome}
+          onSalvoSucesso={() => recarregarDadosUnidade()}
+        />
+      )}
+
+      {/* ── ABA 3: CALENDÁRIO MENSAL DE ESCALADOS & PROJEÇÃO ── */}
+      {abaRundown === 'CALENDARIO' && (
+        <CalendarioMensal
+          setorFiltro={setorSelecionadoNome}
+          ocultarSeletorUnidade={true}
+        />
+      )}
+
+      {/* ── ABA 1 / VIEW 1: LOBBY (HISTÓRICO DA UNIDADE) ── */}
+      {abaRundown === 'PLANTAO' && viewAtual === 'lobby' && (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-6 print:hidden">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b pb-4">
             <div>
@@ -544,8 +633,8 @@ export default function Rundown({ setorFiltro }) {
         </div>
       )}
 
-      {/* ── VIEW 2: FORMULÁRIO DO RUNDOWN ── */}
-      {viewAtual === 'form' && (
+      {/* ── ABA 1 / VIEW 2: FORMULÁRIO DO RUNDOWN ── */}
+      {abaRundown === 'PLANTAO' && viewAtual === 'form' && (
         <div
           id="area-impressao-rundown"
           className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-6"

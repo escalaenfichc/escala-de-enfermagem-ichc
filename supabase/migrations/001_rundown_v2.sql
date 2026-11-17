@@ -131,6 +131,20 @@ create table if not exists public.dimensionamento_setor (
   primary key (setor_id, turno, categoria)
 );
 
+-- 3.5 Quantidade de Escalados por Unidade / Mês (preenchido pela unidade na aba Escalados do Rundown)
+create table if not exists public.rundown_escalados (
+  setor_id         uuid not null references public.setores_unidades(id),
+  setor_nome       text not null,
+  mes_ano          text not null,                       -- formato 'YYYY-MM'
+  -- padrao_turnos: {"MANHA":{"ENF":0,"TEC":0},"TARDE":{"ENF":0,"TEC":0},"DIURNO12":{"ENF":0,"TEC":0},"NOITE_PAR":{"ENF":0,"TEC":0},"NOITE_IMPAR":{"ENF":0,"TEC":0}}
+  padrao_turnos    jsonb not null default '{}'::jsonb,
+  -- dias: {"1":{"MANHA":{"ENF":0,"TEC":0},"TARDE":{"ENF":0,"TEC":0},"DIURNO12":{"ENF":0,"TEC":0},"NOITE":{"ENF":0,"TEC":0}}, ...}
+  dias             jsonb not null default '{}'::jsonb,
+  responsavel_nome text not null,
+  updated_at       timestamptz not null default now(),
+  primary key (setor_id, mes_ano)
+);
+
 -- -----------------------------------------------------------------------------
 -- 4. Segurança (RLS) das tabelas NOVAS
 --    Unidade: só lê/grava a própria unidade; edita apenas dias >= hoje.
@@ -140,6 +154,19 @@ alter table public.rundown_registro      enable row level security;
 alter table public.rundown_diurno12      enable row level security;
 alter table public.rundown_afastamentos  enable row level security;
 alter table public.dimensionamento_setor enable row level security;
+alter table public.rundown_escalados     enable row level security;
+
+-- rundown_escalados
+drop policy if exists re_select on public.rundown_escalados;
+drop policy if exists re_insert on public.rundown_escalados;
+drop policy if exists re_update on public.rundown_escalados;
+create policy re_select on public.rundown_escalados for select to authenticated
+  using (public.eh_gestor_global() or setor_id = public.minha_unidade());
+create policy re_insert on public.rundown_escalados for insert to authenticated
+  with check (public.eh_gestor_global() or setor_id = public.minha_unidade());
+create policy re_update on public.rundown_escalados for update to authenticated
+  using      (public.eh_gestor_global() or setor_id = public.minha_unidade())
+  with check (public.eh_gestor_global() or setor_id = public.minha_unidade());
 
 -- rundown_registro
 drop policy if exists rr_select on public.rundown_registro;

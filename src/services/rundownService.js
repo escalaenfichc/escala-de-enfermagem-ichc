@@ -13,6 +13,7 @@ const LS_KEYS = {
   AFASTAMENTOS: 'escalaenf_rundown_afastamentos_v2',
   DIMENSIONAMENTO: 'escalaenf_dimensionamento_v2',
   LEITOS: 'escalaenf_leitos_setor_v2',
+  ESCALADOS: 'escalaenf_rundown_escalados_v2',
 };
 
 function lerLS(chave, padrao) {
@@ -118,7 +119,7 @@ export async function carregarSetoresAtivos() {
       const leitos =
         leitosBanco !== undefined && leitosBanco !== null && leitosBanco > 0
           ? Number(leitosBanco)
-          : Number(leitosCache[id] ?? leitosCache[nome] ?? 30);
+          : Number(leitosCache[id] ?? leitosCache[nome] ?? 0);
       return {
         ...s,
         id,
@@ -144,13 +145,12 @@ export async function carregarTodoDimensionamento() {
 }
 
 export function obterMinimoDimensionamento(mapaDim, setorId, setorNome, turno, categoria) {
-  const padrao = categoria === 'ENF' ? 2 : 6;
-  if (!mapaDim) return padrao;
+  if (!mapaDim) return 0;
   const kId = `${setorId}__${turno}__${categoria}`;
   const kNome = `${setorNome}__${turno}__${categoria}`;
   if (mapaDim[kId] !== undefined) return Number(mapaDim[kId]);
   if (mapaDim[kNome] !== undefined) return Number(mapaDim[kNome]);
-  return padrao;
+  return 0;
 }
 
 export async function salvarConfigSetorCompleta({
@@ -200,6 +200,139 @@ export async function salvarConfigSetorCompleta({
     if (eDim) avisos.push(eDim.message);
   }
   return { ok: true, avisos };
+}
+
+// -----------------------------------------------------------------------------
+// 1.5 Quantidade de Escalados da Unidade por Mês/Dia/Turno (rundown_escalados)
+// -----------------------------------------------------------------------------
+export function criarPadraoTurnosEscaladosVazio() {
+  return {
+    MANHA: { ENF: 0, TEC: 0 },
+    TARDE: { ENF: 0, TEC: 0 },
+    DIURNO12: { ENF: 0, TEC: 0 },
+    NOITE_PAR: { ENF: 0, TEC: 0 },
+    NOITE_IMPAR: { ENF: 0, TEC: 0 },
+  };
+}
+
+export async function carregarEscaladosMensal(setorId, setorNome, mesAno) {
+  const mapaLS = lerLS(LS_KEYS.ESCALADOS, {});
+  const kId = `${setorId}__${mesAno}`;
+  const kNome = `${(setorNome || '').toUpperCase()}__${mesAno}`;
+  const local = mapaLS[kId] || mapaLS[kNome] || null;
+
+  if (setorId) {
+    const { data, error } = await supabase
+      .from('rundown_escalados')
+      .select('*')
+      .eq('setor_id', setorId)
+      .eq('mes_ano', mesAno)
+      .maybeSingle();
+
+    if (!error && data) {
+      return {
+        ...data,
+        padrao_turnos: { ...criarPadraoTurnosEscaladosVazio(), ...(data.padrao_turnos || {}) },
+        dias: data.dias || {},
+      };
+    }
+  }
+
+  if (local) {
+    return {
+      ...local,
+      padrao_turnos: { ...criarPadraoTurnosEscaladosVazio(), ...(local.padrao_turnos || {}) },
+      dias: local.dias || {},
+    };
+  }
+
+  return null;
+}
+
+export async function salvarEscaladosMensal({
+  setorId,
+  setorNome,
+  mesAno,
+  padraoTurnos,
+  dias,
+  responsavelNome,
+}) {
+  const agora = new Date().toISOString();
+  const payload = {
+    setor_id: setorId,
+    setor_nome: setorNome,
+    mes_ano: mesAno,
+    padrao_turnos: padraoTurnos || criarPadraoTurnosEscaladosVazio(),
+    dias: dias || {},
+    responsavel_nome: responsavelNome || 'Unidade',
+    updated_at: agora,
+  };
+
+  const mapaLS = lerLS(LS_KEYS.ESCALADOS, {});
+  if (setorId) mapaLS[`${setorId}__${mesAno}`] = payload;
+  if (setorNome) mapaLS[`${setorNome.toUpperCase()}__${mesAno}`] = payload;
+  gravarLS(LS_KEYS.ESCALADOS, mapaLS);
+
+  if (setorId) {
+    const { error } = await supabase
+      .from('rundown_escalados')
+      .upsert(payload, { onConflict: 'setor_id,mes_ano' });
+    if (error) {
+      console.warn('Aviso ao gravar rundown_escalados no Supabase (salvo localmente):', error.message);
+      return { ok: true, salvoNoBanco: false, aviso: error.message };
+    }
+  }
+
+  return { ok: true, salvoNoBanco: true };
+}
+
+/**
+ * Obtém a quantidade de escalados salva para um dia específico (1..31) e turno ('MANHA' | 'TARDE' | 'NOITE').
+ * Se houver ajuste específico salvo para o dia em `dias[dia]`, usa o dia;
+ * caso contrário usa `padrao_turnos`.
+ * Para MANHA e TARDE, retorna também o DIURNO12 correspondente e a soma total.
+ */
+export function obterEscaladosSalvosNoDia(registroEscaladosMes, dia, turno) {
+  if (!registroEscaladosMes) {
+    return {
+      ENF: { base: 0, diurno12: 0, total: 0 },
+      TEC: { base: 0, diurno12: 0, total: 0 },
+    };
+  }
+
+  const n = (v) => Math.max(0, parseInt(v, 10) || 0);
+  const padrao = registroEscaladosMes.padrao_turnos || {};
+  const diaObj = registroEscaladosMes.dias?.[String(dia)] || null;
+  const ehPar = Number(dia) % 2 === 0;
+
+  if (turno === 'NOITE') {
+    const chaveNoitePadrao = ehPar ? 'NOITE_PAR' : 'NOITE_IMPAR';
+    const enfNoite =
+      diaObj?.NOITE?.ENF !== undefined ? n(diaObj.NOITE.ENF) : n(padrao[chaveNoitePadrao]?.ENF);
+    const tecNoite =
+      diaObj?.NOITE?.TEC !== undefined ? n(diaObj.NOITE.TEC) : n(padrao[chaveNoitePadrao]?.TEC);
+
+    return {
+      ENF: { base: enfNoite, diurno12: 0, total: enfNoite },
+      TEC: { base: tecNoite, diurno12: 0, total: tecNoite },
+    };
+  }
+
+  // MANHA ou TARDE (soma o bloco 6h + Diurno 12h)
+  const enfBase =
+    diaObj?.[turno]?.ENF !== undefined ? n(diaObj[turno].ENF) : n(padrao[turno]?.ENF);
+  const tecBase =
+    diaObj?.[turno]?.TEC !== undefined ? n(diaObj[turno].TEC) : n(padrao[turno]?.TEC);
+
+  const enfD12 =
+    diaObj?.DIURNO12?.ENF !== undefined ? n(diaObj.DIURNO12.ENF) : n(padrao.DIURNO12?.ENF);
+  const tecD12 =
+    diaObj?.DIURNO12?.TEC !== undefined ? n(diaObj.DIURNO12.TEC) : n(padrao.DIURNO12?.TEC);
+
+  return {
+    ENF: { base: enfBase, diurno12: enfD12, total: enfBase + enfD12 },
+    TEC: { base: tecBase, diurno12: tecD12, total: tecBase + tecD12 },
+  };
 }
 
 // -----------------------------------------------------------------------------
