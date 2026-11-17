@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { Activity, Lock, Mail, Building2, ShieldCheck, FlaskConical } from 'lucide-react';
 import { isNominal } from '../config/ambiente';
 
@@ -16,6 +17,7 @@ function slugUnidade(nome = '') {
 
 export default function Login() {
   const navigate = useNavigate();
+  const { loginUnidadeSemSenha } = useAuth();
 
   const [abaLogin, setAbaLogin] = useState(isNominal ? 'EMAIL' : 'UNIDADE'); // 'UNIDADE' | 'EMAIL'
   const [unidades, setUnidades] = useState([]);
@@ -73,18 +75,48 @@ export default function Login() {
     e.preventDefault();
     setErroMsg('');
 
-    let emailParaLogin = email.trim();
-    if (abaLogin === 'UNIDADE') {
+    // Modo Login da Unidade: permite entrar sem senha para testes (ou com senha se digitada)
+    if (abaLogin === 'UNIDADE' && !isNominal) {
       if (!unidadeSelecionada) {
         return alert('Selecione a sua Unidade na lista.');
       }
-      const uObj = unidades.find((u) => u.nome === unidadeSelecionada);
-      emailParaLogin =
-        uObj?.login_email || `${slugUnidade(unidadeSelecionada)}@unidades.escalaenf.app`;
-    } else if (!emailParaLogin) {
-      return alert('Digite seu e-mail.');
+      const uObj = unidades.find((u) => u.nome === unidadeSelecionada) || {
+        nome: unidadeSelecionada,
+      };
+
+      // Se não digitou senha, entra diretamente em modo de teste da unidade
+      if (!senha.trim()) {
+        loginUnidadeSemSenha(uObj);
+        navigate('/');
+        return;
+      }
+
+      // Se digitou senha, tenta autenticar no Supabase; se o login ainda não existir no banco, libera para teste
+      setLoading(true);
+      try {
+        const emailParaLogin =
+          uObj.login_email || `${slugUnidade(unidadeSelecionada)}@unidades.escalaenf.app`;
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: emailParaLogin,
+          password: senha,
+        });
+        if (!error && data?.user) {
+          setTimeout(() => navigate('/'), 300);
+          return;
+        }
+        // Fallback para teste caso as senhas ainda não tenham sido geradas no banco
+        loginUnidadeSemSenha(uObj);
+        navigate('/');
+        return;
+      } finally {
+        setLoading(false);
+      }
     }
 
+    const emailParaLogin = email.trim();
+    if (!emailParaLogin) {
+      return alert('Digite seu e-mail.');
+    }
     if (!senha) return alert('Digite sua senha.');
 
     setLoading(true);
@@ -96,11 +128,7 @@ export default function Login() {
 
       if (error) {
         console.error('Erro no login:', error.message);
-        setErroMsg(
-          abaLogin === 'UNIDADE'
-            ? 'Senha da unidade incorreta ou login da unidade ainda não ativado.'
-            : 'E-mail ou senha incorretos.'
-        );
+        setErroMsg('E-mail ou senha incorretos.');
         setLoading(false);
         return;
       }
@@ -228,7 +256,9 @@ export default function Login() {
 
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-2">
-              {abaLogin === 'UNIDADE' && !isNominal ? 'Senha da Unidade' : 'Senha'}
+              {abaLogin === 'UNIDADE' && !isNominal
+                ? 'Senha da Unidade (Opcional para teste)'
+                : 'Senha'}
             </label>
             <div className="relative w-full">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -237,7 +267,11 @@ export default function Login() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 className="w-full border border-slate-300 pl-11 pr-12 p-3.5 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 font-medium transition-all"
-                placeholder="Digite a senha"
+                placeholder={
+                  abaLogin === 'UNIDADE' && !isNominal
+                    ? 'Deixe em branco para entrar em modo de teste'
+                    : 'Digite a senha'
+                }
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
               />

@@ -28,6 +28,19 @@ export const AuthProvider = ({ children }) => {
 
   const loadUserProfile = async (currentSession) => {
     if (!currentSession?.user) {
+      // Verifica se há uma sessão de teste de Unidade sem senha ativa
+      try {
+        const rawUnidade = localStorage.getItem('escalaenf_sessao_unidade_teste');
+        if (rawUnidade) {
+          const uTeste = JSON.parse(rawUnidade);
+          setUser(uTeste);
+          setSession(null);
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.warn('Falha ao restaurar sessão de unidade:', e);
+      }
       setUser(null);
       setSession(null);
       setLoading(false);
@@ -168,15 +181,43 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginUnidadeSemSenha = (unidadeObj) => {
+    const nomeUnidade = unidadeObj?.nome || unidadeObj?.nome_oficial || String(unidadeObj || '');
+    const usuarioUnidade = {
+      id: `unidade_${unidadeObj?.id || nomeUnidade}`,
+      email: unidadeObj?.login_email || 'unidade@rundown.local',
+      role: 'Unidade',
+      perfil_secundario: '',
+      perfis: ['Unidade'],
+      nome: nomeUnidade,
+      unidadeId: unidadeObj?.id || null,
+      unidadeLogada: nomeUnidade,
+      matricula: null,
+      setores: [nomeUnidade],
+      setores_detalhes: unidadeObj ? [unidadeObj] : [],
+      acesso_v1: false,
+      acesso_v2: true,
+      modoTesteSemSenha: true,
+    };
+    localStorage.setItem('escalaenf_sessao_unidade_teste', JSON.stringify(usuarioUnidade));
+    setUser(usuarioUnidade);
+    setLoading(false);
+  };
+
   const signOut = async () => {
     setLoading(true);
+    localStorage.removeItem('escalaenf_sessao_unidade_teste');
     await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setLoading(false);
   };
 
   const value = {
     session,
     user,
     signIn,
+    loginUnidadeSemSenha,
     signOut,
     filtroGlobalSetor,
     setFiltroGlobalSetor,
