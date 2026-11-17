@@ -841,13 +841,6 @@ export default function Planejamento() {
               <CalendarDays size={16} />
               {isNominal ? 'Gestão Operacional' : 'Rundown & Operação'}
            </button>
-
-           {(user?.role === 'Administrador' || user?.role === 'Diretor' || isSupervisao) && (
-             <button onClick={() => navigate('/dashboard-admin')} className="px-4 py-2 font-bold text-sm rounded-t-lg transition-colors border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                <BarChart2 size={16} />
-                Gestão Estratégica & Dimensionamento
-             </button>
-           )}
         </div>
 
         {/* Nível 2: Submódulos da Aba Selecionada */}

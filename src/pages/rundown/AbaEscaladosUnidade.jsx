@@ -346,8 +346,8 @@ export default function AbaEscaladosUnidade({
                 <th className="p-2.5 text-center bg-sky-50/60">Manhã 6h (ENF / TÉC)</th>
                 <th className="p-2.5 text-center bg-amber-50/60">Tarde 6h (ENF / TÉC)</th>
                 <th className="p-2.5 text-center bg-orange-50/60">Diurno 12h (ENF / TÉC)</th>
-                <th className="p-2.5 text-center bg-indigo-50/40">Total M / Total T</th>
                 <th className="p-2.5 text-center bg-violet-50/60">Noite 12h (ENF / TÉC)</th>
+                <th className="p-2.5 text-center bg-indigo-50/40">Total M / T / N (ENF / TÉC)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -451,18 +451,6 @@ export default function AbaEscaladosUnidade({
                       </div>
                     </td>
 
-                    {/* Resumo Somado M e T */}
-                    <td className="p-2 text-center text-[11px] font-bold text-slate-600 bg-indigo-50/20">
-                      <div>
-                        M: <strong className="text-indigo-700">{item.totalManhaENF}</strong> /{' '}
-                        <strong className="text-teal-700">{item.totalManhaTEC}</strong>
-                      </div>
-                      <div>
-                        T: <strong className="text-indigo-700">{item.totalTardeENF}</strong> /{' '}
-                        <strong className="text-teal-700">{item.totalTardeTEC}</strong>
-                      </div>
-                    </td>
-
                     {/* Noite 12h */}
                     <td className="p-2 text-center">
                       <div className="inline-flex items-center gap-1">
@@ -485,6 +473,22 @@ export default function AbaEscaladosUnidade({
                           }
                           className="w-12 text-center font-bold text-teal-700 bg-white border border-violet-300 rounded py-1"
                         />
+                      </div>
+                    </td>
+
+                    {/* Resumo Somado M, T e N (Última Coluna) */}
+                    <td className="p-2 text-center text-[11px] font-bold text-slate-600 bg-indigo-50/20">
+                      <div>
+                        M: <strong className="text-indigo-700">{item.totalManhaENF}</strong> /{' '}
+                        <strong className="text-teal-700">{item.totalManhaTEC}</strong>
+                      </div>
+                      <div>
+                        T: <strong className="text-indigo-700">{item.totalTardeENF}</strong> /{' '}
+                        <strong className="text-teal-700">{item.totalTardeTEC}</strong>
+                      </div>
+                      <div>
+                        N: <strong className="text-indigo-700">{Number(item.noite.ENF) || 0}</strong> /{' '}
+                        <strong className="text-teal-700">{Number(item.noite.TEC) || 0}</strong>
                       </div>
                     </td>
                   </tr>
