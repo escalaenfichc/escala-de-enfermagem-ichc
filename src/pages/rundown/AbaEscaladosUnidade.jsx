@@ -251,7 +251,7 @@ export default function AbaEscaladosUnidade({
             <Users className="text-indigo-600" /> Inserir Quantidade de Escalados — {setorNome}
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Os números de escalados salvos aqui alimentam diretamente o <strong>Calendário Mensal</strong> e preenchem automaticamente o <strong>Rundown Diário</strong>.
+            Os números de escalados salvos aqui alimentam diretamente a <strong>Escala Mensal</strong> e preenchem automaticamente a <strong>Supervisão</strong>.
           </p>
         </div>
 

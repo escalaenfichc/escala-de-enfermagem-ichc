@@ -27,7 +27,7 @@ export default function BannerAmbiente() {
         <span>
           {isNominal
             ? AMBIENTE_LABEL || 'VERSÃO 1 · DEMONSTRAÇÃO NOMINAL (DADOS FICTÍCIOS)'
-            : 'VERSÃO 2 · RUNDOWN QUANTITATIVO & SUPERVISÃO (SEM DADOS NOMINAIS)'}
+            : 'VERSÃO 2 · SUPERVISÃO (SEM DADOS NOMINAIS)'}
         </span>
       </div>
 
@@ -36,10 +36,10 @@ export default function BannerAmbiente() {
           type="button"
           onClick={alternarModo}
           className="bg-white/20 hover:bg-white/30 text-white px-2.5 py-0.5 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-colors"
-          title="Alternar visualização entre V1 (Nominal Demo) e V2 (Rundown Produção)"
+          title="Alternar visualização entre V1 (Nominal Demo) e V2"
         >
           <ArrowLeftRight size={12} />
-          Alternar para {isNominal ? 'V2 (Rundown)' : 'V1 (Demo Nominal)'}
+          Alternar para {isNominal ? 'V2' : 'V1 (Demo Nominal)'}
         </button>
       )}
     </div>

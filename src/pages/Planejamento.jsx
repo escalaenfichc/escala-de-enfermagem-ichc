@@ -782,7 +782,7 @@ export default function Planejamento() {
 
   const TODOS_MODULOS = [
     // Módulos Quantitativos / Compartilhados (acima do card, limpos e sem duplicidade)
-    { id: "rundown", label: "Rundown", icon: <Clock size={16}/>, allowedRoles: ROLES_OPERACIONAIS_TODOS, categoria: 'OPERACIONAL', modo: 'AMBOS' },
+    { id: "rundown", label: "Supervisão", icon: <Clock size={16}/>, allowedRoles: ROLES_OPERACIONAIS_TODOS, categoria: 'OPERACIONAL', modo: 'AMBOS' },
     { id: "escala", label: "Escala Mensal", icon: <CalendarDays size={16}/>, allowedRoles: ROLES_OPERACIONAIS_TODOS, categoria: 'OPERACIONAL', modo: 'AMBOS' },
     { id: "inserir_escala", label: "Inserir Escala", icon: <UserPlus size={16}/>, allowedRoles: ROLES_OPERACIONAIS_TODOS, categoria: 'OPERACIONAL', modo: 'AMBOS' },
     { id: "supervisao_rundown", label: "Supervisão Consolidada", icon: <Globe size={16}/>, allowedRoles: ['Supervisão', 'Supervisão Plantonista', 'Liderança 2', 'Enf. Liderança 2', 'Diretor', 'Administrador', 'Administrativo'], categoria: 'OPERACIONAL', modo: 'AMBOS' },
@@ -839,7 +839,7 @@ export default function Planejamento() {
               setModuloAtivo(!isNominal ? 'rundown' : (user?.role === 'Plantão Assistencial' ? 'plantao_diario' : 'escala_nominal')); 
            }} className={`px-4 py-2 font-bold text-sm rounded-t-lg transition-colors flex items-center gap-2 ${abaPrincipal === 'OPERACIONAL' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}>
               <CalendarDays size={16} />
-              {isNominal ? 'Gestão Operacional' : 'Rundown & Operação'}
+              {isNominal ? 'Gestão Operacional' : 'Supervisão'}
            </button>
         </div>
 

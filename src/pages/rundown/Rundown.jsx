@@ -173,7 +173,7 @@ export default function Rundown({ setorFiltro }) {
     );
     if (existente) {
       alert(
-        `Já existe um Rundown registrado hoje (${formatarDataBR(hoje)}) para o turno ${turno}. Abra o registro existente na lista para consultar ou editar.`
+        `Já existe uma Supervisão registrada hoje (${formatarDataBR(hoje)}) para o turno ${turno}. Abra o registro existente na lista para consultar ou editar.`
       );
       return;
     }
@@ -382,10 +382,10 @@ export default function Rundown({ setorFiltro }) {
         registroExistente: registroAtivo,
       });
       await recarregarDadosUnidade();
-      alert('Rundown da unidade registrado com sucesso!');
+      alert('Supervisão da unidade registrada com sucesso!');
       setViewAtual('lobby');
     } catch (err) {
-      alert('Erro ao salvar Rundown: ' + (err.message || err));
+      alert('Erro ao salvar Supervisão: ' + (err.message || err));
     } finally {
       setSalvando(false);
     }
@@ -394,7 +394,7 @@ export default function Rundown({ setorFiltro }) {
   if (loadingInicial) {
     return (
       <div className="p-12 text-center text-slate-500 font-bold">
-        Carregando unidades e parâmetros do Rundown...
+        Carregando unidades e parâmetros da Supervisão...
       </div>
     );
   }
@@ -411,7 +411,7 @@ export default function Rundown({ setorFiltro }) {
           </div>
           <div>
             <h2 className="text-lg font-extrabold text-slate-800">
-              Rundown
+              Supervisão
             </h2>
             <p className="text-xs text-slate-500">
               Lançamento diário por turno, gestão de leitos, alertas e projeção de afastamentos.
@@ -448,7 +448,7 @@ export default function Rundown({ setorFiltro }) {
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b pb-4">
             <div>
               <p className="text-sm font-bold text-slate-600 uppercase tracking-wider">
-                Histórico de Rundowns — {setorSelecionadoNome}
+                Histórico de Supervisão — {setorSelecionadoNome}
               </p>
               <p className="text-xs text-slate-400 mt-0.5">
                 Capacidade configurada: <strong className="text-slate-600">{leitosTotaisSetor} leitos</strong> · Selecione o turno abaixo para iniciar o preenchimento de hoje.
@@ -473,7 +473,7 @@ export default function Rundown({ setorFiltro }) {
                 onClick={iniciarNovoRundown}
                 className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 text-sm shadow-sm"
               >
-                <Plus size={18} /> Iniciar Rundown de Hoje
+                <Plus size={18} /> Iniciar Supervisão de Hoje
               </button>
             </div>
           </div>
@@ -483,7 +483,7 @@ export default function Rundown({ setorFiltro }) {
               <div className="text-center py-12 text-slate-400">
                 <ClipboardCheck size={36} className="mx-auto mb-2 opacity-60" />
                 <p className="text-sm font-medium">
-                  Nenhum Rundown registrado para {setorSelecionadoNome}.
+                  Nenhum registro de Supervisão para {setorSelecionadoNome}.
                 </p>
               </div>
             ) : (
@@ -591,7 +591,7 @@ export default function Rundown({ setorFiltro }) {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-base font-black text-slate-800 uppercase">
-                    Rundown · {setorSelecionadoNome}
+                    Supervisão · {setorSelecionadoNome}
                   </span>
                   <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
                     Turno: {labelTurno}
@@ -1313,7 +1313,7 @@ export default function Rundown({ setorFiltro }) {
                 className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black shadow-lg hover:bg-indigo-700 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
               >
                 <Send size={18} />
-                {salvando ? 'Salvando...' : 'Salvar e Finalizar Rundown'}
+                {salvando ? 'Salvando...' : 'Salvar e Finalizar Supervisão'}
               </button>
             ) : (
               <div className="bg-slate-100 border border-slate-200 text-slate-600 font-bold px-6 py-2.5 rounded-xl flex items-center gap-2 text-sm">

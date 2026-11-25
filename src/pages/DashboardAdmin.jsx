@@ -326,7 +326,7 @@ function ConfiguracoesDimensionamento({ setores }) {
 const anoAtual = new Date().getFullYear();
 
 const ABAS = [
-  { id: 'supervisao',       label: 'Supervisão Consolidada (Rundown)', icon: ShieldCheck, modo: 'AMBOS'   },
+  { id: 'supervisao',       label: 'Supervisão Consolidada',           icon: ShieldCheck, modo: 'AMBOS'   },
   { id: 'dimensionamento',  label: 'Config. Leitos e Necessários',     icon: Settings,    modo: 'AMBOS'   },
   { id: 'estrategica',      label: 'Visão Estratégica (Nominal)',      icon: BarChart2,   modo: 'NOMINAL' },
   { id: 'auditoria',        label: 'Auditoria de Escalas (Nominal)',   icon: Activity,    modo: 'NOMINAL' },
@@ -377,7 +377,7 @@ export default function DashboardAdmin() {
          
          <button onClick={() => navigate('/planejamento', { state: { abaPrincipal: 'OPERACIONAL', moduloAtivo: isNominal ? 'escala_nominal' : 'rundown' } })} className="px-4 py-2 font-bold text-sm rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2">
             <CalendarDays size={16} />
-            {isNominal ? 'Gestão Operacional' : 'Rundown & Operação'}
+            {isNominal ? 'Gestão Operacional' : 'Supervisão'}
          </button>
 
          <button className="px-4 py-2 font-bold text-sm rounded-t-lg border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2 transition-colors">

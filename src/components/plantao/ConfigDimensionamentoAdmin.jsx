@@ -126,7 +126,7 @@ export default function ConfigDimensionamentoAdmin() {
             <ShieldCheck size={20} className="text-indigo-600" /> Configuração de Leitos e Quadro Mínimo Fixo (Necessários)
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Os valores de <strong>Necessários</strong> e <strong>Leitos Totais</strong> definidos aqui alimentam automaticamente o Rundown de cada unidade. Somente o Administrador pode alterá-los.
+            Os valores de <strong>Necessários</strong> e <strong>Leitos Totais</strong> definidos aqui alimentam automaticamente a Supervisão de cada unidade. Somente o Administrador pode alterá-los.
           </p>
         </div>
 

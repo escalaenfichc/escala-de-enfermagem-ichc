@@ -186,7 +186,7 @@ export default function ConsolidadoSupervisao({ onAbrirUnidade }) {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-4">
           <div>
             <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
-              <LayoutDashboard className="text-indigo-600" /> Painel Consolidado da Supervisão (Rundown)
+              <LayoutDashboard className="text-indigo-600" /> Painel Consolidado da Supervisão
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Acompanhamento em tempo real do quantitativo de enfermagem, ocupação de leitos, alertas e projeção de afastamentos de todas as unidades.

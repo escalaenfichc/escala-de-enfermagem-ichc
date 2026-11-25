@@ -166,7 +166,7 @@ export default function Login() {
               </>
             ) : (
               <>
-                <ShieldCheck size={14} /> Versão 2 · Rundown & Supervisão
+                <ShieldCheck size={14} /> Versão 2 · Supervisão
               </>
             )}
           </p>

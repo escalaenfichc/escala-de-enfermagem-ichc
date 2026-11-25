@@ -234,7 +234,7 @@ export default function CalendarioMensal({ setorFiltro, ocultarSeletorUnidade = 
             <CalendarDays className="text-indigo-600" /> Calendário Quantitativo Mensal — {setorNome}
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Reflete os <strong>Escalados</strong> salvos pela unidade, os <strong>Rundowns Diários</strong> e os <strong>Afastamentos Projetados</strong> (sem dados fictícios).
+            Reflete os <strong>Escalados</strong> salvos pela unidade, os registros de <strong>Supervisão</strong> e os <strong>Afastamentos Projetados</strong> (sem dados fictícios).
           </p>
         </div>
 
@@ -344,7 +344,7 @@ export default function CalendarioMensal({ setorFiltro, ocultarSeletorUnidade = 
                   {c.preenchido ? (
                     <span
                       className="w-2 h-2 rounded-full bg-emerald-500"
-                      title="Rundown diário preenchido"
+                      title="Supervisão preenchida"
                     />
                   ) : c.temEscaladoSalvo ? (
                     <span
